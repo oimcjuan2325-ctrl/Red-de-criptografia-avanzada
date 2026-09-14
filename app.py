@@ -205,6 +205,13 @@ TRANSLATIONS = {
             " estrictamente en ESPAÑOL: {ai_query}"
         ),
         "calc_link": "🔗 **[calculadora con IA](https://calculadora-con-ia.streamlit.app)**",
+        "account_deleted_chat_msg": (
+            "Esta cuenta ha sido borrada, ya no puedes chatear con esa cuenta."
+        ),
+        "delete_contact_btn": "Borrar contacto",
+        "contact_deleted_success": "Contacto y chats eliminados correctamente.",
+        "del_contact_section": "Eliminar Contacto",
+        "select_to_delete": "Selecciona contacto a eliminar:",
     },
     "Euskera": {
         "login_title": "Saioa Hasi",
@@ -317,6 +324,16 @@ TRANSLATIONS = {
             " erabiltzailearen honako galderari euskaraz soilik: {ai_query}"
         ),
         "calc_link": "🔗 **[kalkulagailua AI-rekin](https://calculadora-con-ia.streamlit.app)**",
+        "account_deleted_chat_msg": (
+            "Kontu hau ezabatua izan da, ezin duzu jada kontu horrekin"
+            " txateatu."
+        ),
+        "delete_contact_btn": "Ezabatu kontaktua",
+        "contact_deleted_success": (
+            "Kontaktua eta txatak arrakastaz ezabatu dira."
+        ),
+        "del_contact_section": "Ezabatu Kontaktua",
+        "select_to_delete": "Hautatu ezabatzeko kontaktua:",
     },
 }
 
@@ -496,13 +513,12 @@ elif menu == t["sec3"]:
 
   all_contacts_db = load_contacts()
   user_contacts = all_contacts_db.get(st.session_state.username, [])
+  users_db = load_users()
 
   with col1:
     st.subheader(t["contacts_header"])
     nuevo_contacto = st.text_input(t["add_contact_label"])
     if st.button(t["add_btn"]):
-      users_db = load_users()
-
       if (
           nuevo_contacto in users_db
           and nuevo_contacto not in user_contacts
@@ -530,63 +546,119 @@ elif menu == t["sec3"]:
     else:
       selected_contact = st.radio(t["select_chat"], user_contacts)
 
+    st.markdown("---")
+    st.subheader(t["del_contact_section"])
+    if user_contacts:
+      contact_to_delete = st.selectbox(t["select_to_delete"], user_contacts)
+      if st.button(t["delete_contact_btn"]):
+        # Remover de los contactos del usuario actual
+        if contact_to_delete in user_contacts:
+          user_contacts.remove(contact_to_delete)
+          all_contacts_db[st.session_state.username] = user_contacts
+          save_contacts(all_contacts_db)
+
+        # Remover del otro usuario también si lo tiene
+        other_contacts = all_contacts_db.get(contact_to_delete, [])
+        if st.session_state.username in other_contacts:
+          other_contacts.remove(st.session_state.username)
+          all_contacts_db[contact_to_delete] = other_contacts
+          save_contacts(all_contacts_db)
+
+        # Borrar salas de chat de la base de datos de chats
+        all_chats = load_chats()
+        rooms_to_remove = [
+            room
+            for room in all_chats.keys()
+            if st.session_state.username in room
+            and contact_to_delete in room
+        ]
+        for r in rooms_to_remove:
+          del all_chats[r]
+        save_chats(all_chats)
+
+        st.success(t["contact_deleted_success"])
+        st.rerun()
+
   with col2:
     if selected_contact:
-      st.subheader(
-          f"{'Txata honekin' if st.session_state.lang == 'Euskera' else 'Chat con'}: {selected_contact}"
-      )
-      chat_container = st.container(height=350)
+      # Comprobamos si la cuenta del contacto fue borrada de la base de datos general de usuarios
+      if selected_contact not in users_db:
+        st.error(t["account_deleted_chat_msg"])
+        if st.button(t["delete_contact_btn"]):
+          if selected_contact in user_contacts:
+            user_contacts.remove(selected_contact)
+            all_contacts_db[st.session_state.username] = user_contacts
+            save_contacts(all_contacts_db)
 
-      st.session_state.chat_history = load_chats()
-      room_key = tuple(sorted([st.session_state.username, selected_contact]))
+          all_chats = load_chats()
+          rooms_to_remove = [
+              room
+              for room in all_chats.keys()
+              if st.session_state.username in room
+              and selected_contact in room
+          ]
+          for r in rooms_to_remove:
+            del all_chats[r]
+          save_chats(all_chats)
 
-      if room_key not in st.session_state.chat_history:
-        st.session_state.chat_history[room_key] = [
-            {
-                "sender": selected_contact,
-                "text": "Kaixo!"
-                if st.session_state.lang == "Euskera"
-                else "¡Hola!",
-            }
-        ]
-        save_chats(st.session_state.chat_history)
-
-      with chat_container:
-        for msg in st.session_state.chat_history[room_key]:
-          sender_label = (
-              "Zu"
-              if msg["sender"] == st.session_state.username
-              and st.session_state.lang == "Euskera"
-              else (
-                  "Tú"
-                  if msg["sender"] == st.session_state.username
-                  else msg["sender"]
-              )
-          )
-          if msg["sender"] == st.session_state.username:
-            st.markdown(
-                f"<div style='text-align: right; background-color:"
-                f" #DCF8C6; color: black; padding: 8px; border-radius: 10px;"
-                f" margin: 5px;'><b>{sender_label}:</b> {msg['text']}</div>",
-                unsafe_allow_html=True,
-            )
-          else:
-            st.markdown(
-                f"<div style='text-align: left; background-color: #E2E2E2;"
-                f" color: black; padding: 8px; border-radius: 10px; margin:"
-                f" 5px;'><b>{msg['sender']}:</b> {msg['text']}</div>",
-                unsafe_allow_html=True,
-            )
-
-      with st.form(key="chat_form", clear_on_submit=True):
-        mensaje_texto = st.text_input(t["type_msg"])
-        enviar_msg = st.form_submit_button(t["send_btn"])
-        if enviar_msg and mensaje_texto:
-          st.session_state.chat_history[room_key].append(
-              {"sender": st.session_state.username, "text": mensaje_texto}
-          )
-          save_chats(st.session_state.chat_history)
+          st.success(t["contact_deleted_success"])
           st.rerun()
+      else:
+        st.subheader(
+            f"{'Txata honekin' if st.session_state.lang == 'Euskera' else 'Chat con'}: {selected_contact}"
+        )
+        chat_container = st.container(height=350)
+
+        st.session_state.chat_history = load_chats()
+        room_key = tuple(sorted([st.session_state.username, selected_contact]))
+
+        if room_key not in st.session_state.chat_history:
+          st.session_state.chat_history[room_key] = [
+              {
+                  "sender": selected_contact,
+                  "text": "Kaixo!"
+                  if st.session_state.lang == "Euskera"
+                  else "¡Hola!",
+              }
+          ]
+          save_chats(st.session_state.chat_history)
+
+        with chat_container:
+          for msg in st.session_state.chat_history[room_key]:
+            sender_label = (
+                "Zu"
+                if msg["sender"] == st.session_state.username
+                and st.session_state.lang == "Euskera"
+                else (
+                    "Tú"
+                    if msg["sender"] == st.session_state.username
+                    else msg["sender"]
+                )
+            )
+            if msg["sender"] == st.session_state.username:
+              st.markdown(
+                  f"<div style='text-align: right; background-color:"
+                  f" #DCF8C6; color: black; padding: 8px; border-radius: 10px;"
+                  f" margin: 5px;'><b>{sender_label}:</b> {msg['text']}</div>",
+                  unsafe_allow_html=True,
+              )
+            else:
+              st.markdown(
+                  f"<div style='text-align: left; background-color: #E2E2E2;"
+                  f" color: black; padding: 8px; border-radius: 10px; margin:"
+                  f" 5px;'><b>{msg['sender']}:</b> {msg['text']}</div>",
+                  unsafe_allow_html=True,
+              )
+
+        with st.form(key="chat_form", clear_on_submit=True):
+          mensaje_texto = st.text_input(t["type_msg"])
+          enviar_msg = st.form_submit_button(t["send_btn"])
+          if enviar_msg and mensaje_texto:
+            st.session_state.chat_history[room_key].append(
+                {"sender": st.session_state.username, "text": mensaje_texto}
+            )
+            save_chats(st.session_state.chat_history)
+            st.rerun()
     else:
       st.info(t["select_contact_prompt"])
 
