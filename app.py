@@ -1,17 +1,18 @@
 import base64
+import io
 import json
 import os
 import time
 import google.generativeai as genai
 import streamlit as st
 from cryptography.fernet import Fernet
+from PIL import Image
 
 # ====================================================
 # CONFIGURACIÓN SEGURA DE LA API KEY (DESDE SECRETS)
 # ====================================================
 try:
   genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-  # Actualizado al modelo estándar actual compatible
   gemini_model = genai.GenerativeModel("gemini-3.6-flash")
 except Exception:
   gemini_model = None
@@ -92,7 +93,7 @@ if "users_db" not in st.session_state:
 if "chat_history" not in st.session_state:
   st.session_state.chat_history = load_chats()
 
-# Textos traducidos completos (Español y Euskera)
+# Diccionario completo de traducciones para toda la interfaz (Español y Euskera)
 TRANSLATIONS = {
     "Español": {
         "login_title": "Iniciar Sesión",
@@ -107,6 +108,7 @@ TRANSLATIONS = {
         "sec1": "1. Cifrado y Descifrado Potente",
         "sec2": "2. Base de Descifrado Inteligente (IA)",
         "sec3": "3. Mini-WhatsApp (Chat)",
+        "sec4": "4. Cifrado de Imágenes (Bits)",
         "config": "Configuración",
         "ai_helper": "Asistente IA",
         "lang_label": "Idioma / Hizkuntza",
@@ -157,11 +159,48 @@ TRANSLATIONS = {
         "ia_btn": "Analizar y Descifrar con Gemini",
         "ia_spinner": "Gemini está analizando el cifrado...",
         "ia_result": "¡Análisis completado por Gemini!",
+        "img_title": "Cifrado de Imágenes a Nivel de Bits",
+        "img_desc": (
+            "Sube una imagen, conviértela a flujo de bytes/bits y cifrala"
+            " completamente para enviarla de forma segura."
+        ),
+        "img_cifrar_tab": "Cifrar Imagen",
+        "img_descifrar_tab": "Descifrar Imagen",
+        "subir_img_label": "Sube una imagen (PNG o JPG):",
+        "cifrar_img_btn": "Cifrar Imagen Completa",
+        "img_cifrada_exito": "¡Imagen cifrada en formato binario con éxito!",
+        "token_img_label": "Token de la imagen cifrada (Guárdalo o compártelo):",
+        "clave_img_label": "Clave secreta de la imagen:",
+        "token_img_input": "Introduce el token cifrado de la imagen:",
+        "descifrar_img_btn": "Descifrar y Restaurar Imagen",
+        "img_original_caption": "Imagen Original",
+        "img_decrypted_success": "¡Imagen descifrada y restaurada con éxito!",
+        "img_decrypted_caption": "Imagen Descifrada",
+        "img_error": "Error al descifrar la imagen: ",
         "ai_helper_desc": (
             "Gemini está conectado para ayudarte en esta sección."
         ),
         "ai_query_label": "¿En qué te puedo ayudar?",
         "ai_query_btn": "Preguntar a Gemini",
+        "ai_thinking": "Gemini pensando...",
+        "ai_missing_key": "Falta configurar la API Key en los Secrets.",
+        "write_query": "Escribe una consulta.",
+        "select_contact_prompt": (
+            "Selecciona o agrega un contacto para ver la conversación."
+        ),
+        "contacts_header": "Contactos",
+        "user_exists_warn": "El usuario ya existe. / Erabiltzailea badago jada.",
+        "account_created": (
+            "¡Cuenta creada con éxito! / Kontua arrakastaz sortu da!"
+        ),
+        "fill_fields": "Rellene todos los campos. / Bete eremu guztiak.",
+        "nav_sidebar": "Navegación",
+        "same_lang_info": "El idioma seleccionado es el mismo.",
+        "ai_helper_prompt": (
+            "Estás en una web de ciberseguridad en la sección '{menu}'."
+            " El usuario pregunta: {ai_query}. Responde de forma útil y breve."
+        ),
+        "calc_link": "🔗 **[calculadora con IA](https://calculadora-con-ia.streamlit.app)**",
     },
     "Euskera": {
         "login_title": "Saioa Hasi",
@@ -176,6 +215,7 @@ TRANSLATIONS = {
         "sec1": "1. Enkripzio eta Desenkripzio Indartsua",
         "sec2": "2. Desenkripzio Adimendunaren Basea (AI)",
         "sec3": "3. Mini-WhatsApp (Txata)",
+        "sec4": "4. Irudiak Enkripatzea (Bitak)",
         "config": "Konfigurazioa",
         "ai_helper": "AI Laguntzailea",
         "lang_label": "Hizkuntza / Idioma",
@@ -228,11 +268,53 @@ TRANSLATIONS = {
         "ia_btn": "Aztertu eta Desenkripatu Gemini-rekin",
         "ia_spinner": "Gemini enkripzioa aztertzen ari da...",
         "ia_result": "Gemini-k analisia osatu du!",
+        "img_title": "Irudiak Bit Mailan Enkripatzea",
+        "img_desc": (
+            "Igo irudi bat, bihurtu byte/bit fluxu eta enkripatu guztiz modu"
+            " seguruan bidaltzeko."
+        ),
+        "img_cifrar_tab": "Enkripatu Irudia",
+        "img_descifrar_tab": "Desenkripatu Irudia",
+        "subir_img_label": "Igo irudi bat (PNG edo JPG):",
+        "cifrar_img_btn": "Enkripatu Irudi Osoa",
+        "img_cifrada_exito": (
+            "Irudia formatu bitarrean arrakastaz enkripatu da!"
+        ),
+        "token_img_label": (
+            "Enkripatutako irudiaren tokena (Gorde edo partekatu):"
+        ),
+        "clave_img_label": "Irudiaren gako sekretua:",
+        "token_img_input": "Sartu enkripatutako irudiaren tokena:",
+        "descifrar_img_btn": "Desenkripatu eta Berreskuratu Irudia",
+        "img_original_caption": "Jatorrizko Irudia",
+        "img_decrypted_success": "Irudia arrakastaz desenkripatu eta berreskuratu da!",
+        "img_decrypted_caption": "Irudi Desenkripatua",
+        "img_error": "Errorea irudia desenkripatzean: ",
         "ai_helper_desc": (
             "Gemini konektatuta dago atal honetan laguntzeko."
         ),
         "ai_query_label": "Zertan lagundu dezaket?",
         "ai_query_btn": "Galdetu Gemini-ri",
+        "ai_thinking": "Gemini pentsatzen...",
+        "ai_missing_key": "API Gakoa konfiguratu gabe dago Secret-etan.",
+        "write_query": "Idatzi kontsulta bat.",
+        "select_contact_prompt": (
+            "Hautatu edo gehitu kontaktu bat elkarrizketa ikusteko."
+        ),
+        "contacts_header": "Kontaktuak",
+        "user_exists_warn": "Erabiltzailea badago jada. / El usuario ya existe.",
+        "account_created": (
+            "Kontua arrakastaz sortu da! / ¡Cuenta creada con éxito!"
+        ),
+        "fill_fields": "Bete eremu guztiak. / Rellene todos los campos.",
+        "nav_sidebar": "Nabigazioa",
+        "same_lang_info": "Hautatutako hizkuntza bera da.",
+        "ai_helper_prompt": (
+            "Zibersegurtasun webgune bateko '{menu}' atalean zaude. Erabiltzaileak"
+            " honako hau galdetzen du: {ai_query}. Erantzun modu erabilgarri eta"
+            " laburrean."
+        ),
+        "calc_link": "🔗 **[kalkulagailua AI-rekin](https://calculadora-con-ia.streamlit.app)**",
     },
 }
 
@@ -273,13 +355,13 @@ if not st.session_state.logged_in:
       if reg_submit:
         st.session_state.users_db = load_users()
         if new_u in st.session_state.users_db:
-          st.warning("El usuario ya existe. / Erabiltzailea badago jada.")
+          st.warning(t["user_exists_warn"])
         elif new_u and new_p:
           st.session_state.users_db[new_u] = new_p
           save_users(st.session_state.users_db)
-          st.success("¡Cuenta creada con éxito! / Kontua arrakastaz sortu da!")
+          st.success(t["account_created"])
         else:
-          st.error("Rellene todos los campos. / Bete eremu guztiak.")
+          st.error(t["fill_fields"])
 
   st.stop()
 
@@ -295,7 +377,7 @@ if st.sidebar.button(t["logout"]):
 st.sidebar.markdown("---")
 st.sidebar.subheader(t["nav_title"])
 menu = st.sidebar.radio(
-    "Navegación", [t["sec1"], t["sec2"], t["sec3"], t["config"]]
+    t["nav_sidebar"], [t["sec1"], t["sec2"], t["sec3"], t["sec4"], t["config"]]
 )
 
 # ----------------------------------------------------
@@ -374,7 +456,7 @@ elif menu == t["sec3"]:
   user_contacts = all_contacts_db.get(st.session_state.username, [])
 
   with col1:
-    st.subheader("Contactos")
+    st.subheader(t["contacts_header"])
     nuevo_contacto = st.text_input(t["add_contact_label"])
     if st.button(t["add_btn"]):
       st.session_state.users_db = load_users()
@@ -447,7 +529,55 @@ elif menu == t["sec3"]:
           save_chats(st.session_state.chat_history)
           st.rerun()
     else:
-      st.info("Selecciona o agrega un contacto para ver la conversación.")
+      st.info(t["select_contact_prompt"])
+
+# ----------------------------------------------------
+# SECCIÓN 4: CIFRADO DE IMÁGENES A NIVEL DE BITS/BYTES
+# ----------------------------------------------------
+elif menu == t["sec4"]:
+  st.header("🖼️ " + t["img_title"])
+  st.write(t["img_desc"])
+
+  if "img_fernet_key" not in st.session_state:
+    st.session_state.img_fernet_key = Fernet.generate_key()
+
+  img_tab1, img_tab2 = st.tabs([t["img_cifrar_tab"], t["img_descifrar_tab"]])
+
+  with img_tab1:
+    uploaded_file = st.file_uploader(
+        t["subir_img_label"], type=["png", "jpg", "jpeg"]
+    )
+    if uploaded_file is not None:
+      image = Image.open(uploaded_file)
+      st.image(image, caption=t["img_original_caption"], width=300)
+
+      if st.button(t["cifrar_img_btn"]):
+        img_bytes = uploaded_file.getvalue()
+        f_img = Fernet(st.session_state.img_fernet_key)
+        token_img = f_img.encrypt(img_bytes)
+
+        st.success(t["img_cifrada_exito"])
+        st.text_area(t["token_img_label"], token_img.decode())
+        st.info(
+            f"{t['clave_img_label']} `{st.session_state.img_fernet_key.decode()}`"
+        )
+
+  with img_tab2:
+    token_input = st.text_area(t["token_img_input"])
+    clave_img_input = st.text_input(t["clave_img_label"], type="password")
+
+    if st.button(t["descifrar_img_btn"]):
+      try:
+        f_img = Fernet(clave_img_input.encode())
+        decrypted_bytes = f_img.decrypt(token_input.encode())
+
+        image_stream = io.BytesIO(decrypted_bytes)
+        restored_image = Image.open(image_stream)
+
+        st.success(t["img_decrypted_success"])
+        st.image(restored_image, caption=t["img_decrypted_caption"], width=300)
+      except Exception as e:
+        st.error(f"{t['img_error']}{e}")
 
 # ----------------------------------------------------
 # CONFIGURACIÓN
@@ -472,7 +602,7 @@ elif menu == t["config"]:
         time.sleep(0.5)
         st.rerun()
       else:
-        st.info("El idioma seleccionado es el mismo.")
+        st.info(t["same_lang_info"])
 
 # ----------------------------------------------------
 # ASISTENTE IA DE GEMINI (BARRA LATERAL)
@@ -484,26 +614,22 @@ ai_query = st.sidebar.text_input(t["ai_query_label"])
 if st.sidebar.button(t["ai_query_btn"]):
   if ai_query:
     if not gemini_model:
-      st.sidebar.error("Falta configurar la API Key en los Secrets.")
+      st.sidebar.error(t["ai_missing_key"])
     else:
-      with st.sidebar.spinner("Gemini pensando..."):
+      with st.sidebar.spinner(t["ai_thinking"]):
         try:
-          prompt_helper = (
-              f"Estás en una web de ciberseguridad en la sección '{menu}'."
-              f" El usuario pregunta: {ai_query}. Responde de forma útil y"
-              " breve."
+          prompt_helper = t["ai_helper_prompt"].format(
+              menu=menu, ai_query=ai_query
           )
           response = gemini_model.generate_content(prompt_helper)
           st.sidebar.success(response.text)
         except Exception as e:
           st.sidebar.error(f"Error: {e}")
   else:
-    st.sidebar.warning("Escribe una consulta.")
+    st.sidebar.warning(t["write_query"])
 
 # ----------------------------------------------------
 # ENLACE CALCULADORA CON IA
 # ----------------------------------------------------
 st.sidebar.markdown("---")
-st.sidebar.markdown(
-    "🔗 **[calculadora con IA](https://calculadora-con-ia.streamlit.app)**"
-)
+st.sidebar.markdown(t["calc_link"])
