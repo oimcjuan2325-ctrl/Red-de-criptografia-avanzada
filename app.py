@@ -201,8 +201,9 @@ TRANSLATIONS = {
         "nav_sidebar": "Navegación",
         "same_lang_info": "El idioma seleccionado es el mismo.",
         "ai_helper_prompt": (
-            "Estás en una web de ciberseguridad en la sección '{menu}'."
-            " El usuario pregunta: {ai_query}. Responde de forma útil y breve."
+            "Estás en una web de ciberseguridad en la sección '{menu}'. El"
+            " usuario pregunta: {ai_query}. Responde de forma útil y breve"
+            " hablando estrictamente en ESPAÑOL."
         ),
         "calc_link": "🔗 **[calculadora con IA](https://calculadora-con-ia.streamlit.app)**",
     },
@@ -316,7 +317,7 @@ TRANSLATIONS = {
         "ai_helper_prompt": (
             "Zibersegurtasun webgune bateko '{menu}' atalean zaude. Erabiltzaileak"
             " honako hau galdetzen du: {ai_query}. Erantzun modu erabilgarri eta"
-            " laburrean."
+            " laburrean euskaraz soilik."
         ),
         "calc_link": "🔗 **[kalkulagailua AI-rekin](https://calculadora-con-ia.streamlit.app)**",
     },
@@ -396,19 +397,15 @@ if menu == t["sec1"]:
   with sub_tab1:
     texto_plano = st.text_area(t["texto_plano_label"], "Mensaje secreto")
     if st.button(t["cifrar_btn"]):
-      # 1. Generar una clave única para este mensaje
       clave_dinamica = Fernet.generate_key()
       f = Fernet(clave_dinamica)
-      # 2. Cifrar el texto
       token_datos = f.encrypt(texto_plano.encode())
 
-      # 3. Empaquetar la clave y el token cifrado en un diccionario JSON autocontenido
       paquete = {
           "key": clave_dinamica.decode(),
           "data": token_datos.decode(),
       }
       paquete_json = json.dumps(paquete)
-      # 4. Codificar el paquete completo en Base64 para que sea un único bloque limpio de texto
       token_completo = base64.b64encode(paquete_json.encode()).decode()
 
       st.success(t["cifrado_exito"])
@@ -418,14 +415,12 @@ if menu == t["sec1"]:
     token_entrada = st.text_area(t["texto_cifrado_label"])
     if st.button(t["descifrar_btn"]):
       try:
-        # 1. Decodificar desde Base64 y leer el JSON interno que trae la clave y los datos
         json_decodificado = base64.b64decode(token_entrada.encode()).decode()
         paquete = json.loads(json_decodificado)
 
         clave_extraida = paquete["key"].encode()
         datos_cifrados = paquete["data"].encode()
 
-        # 2. Descifrar utilizando la clave que venía dentro del propio mensaje
         f = Fernet(clave_extraida)
         decrypted = f.decrypt(datos_cifrados)
 
@@ -445,7 +440,7 @@ elif menu == t["sec2"]:
 
   if st.button(t["ia_btn"]):
     if not cifrado_usuario:
-      st.warning("Por favor, introduce un texto.")
+      st.warning("Por favor, introduce un texto." if st.session_state.lang == "Español" else "Mesedez, idatzi testu bat.")
     elif not gemini_model:
       st.error(
           "La API Key no está configurada en los Secrets de Streamlit Cloud."
@@ -453,16 +448,23 @@ elif menu == t["sec2"]:
     else:
       with st.spinner(t["ia_spinner"]):
         try:
-          prompt = (
-              "Analiza el siguiente texto cifrado o codificado. Detecta el tipo"
-              " de cifrado, devuélvelo descifrado y explica el paso a paso."
-              f" Texto: {cifrado_usuario}"
-          )
+          if st.session_state.lang == "Euskera":
+            prompt = (
+                "Aztertu ondorengo testu enkripatua edo kodetua. Detektatu"
+                " enkripzio mota, itzuli desenkripatuta eta azaldu urratsez"
+                f" urrats euskaraz soilik. Testua: {cifrado_usuario}"
+            )
+          else:
+            prompt = (
+                "Analiza el siguiente texto cifrado o codificado. Detecta el tipo"
+                " de cifrado, devuélvelo descifrado y explica el paso a paso en"
+                f" español. Texto: {cifrado_usuario}"
+            )
           response = gemini_model.generate_content(prompt)
           st.success(t["ia_result"])
           st.markdown(response.text)
         except Exception as e:
-          st.error(f"Error al conectar con Gemini: {e}")
+          st.error(f"Error: {e}")
 
 # ----------------------------------------------------
 # SECCIÓN 3: MINI-WHATSAPP (CHAT)
@@ -511,7 +513,7 @@ elif menu == t["sec3"]:
 
   with col2:
     if selected_contact:
-      st.subheader(f"Chat con: {selected_contact}")
+      st.subheader(f"{'Chat con' if st.session_state.lang == 'Español' else 'Txata honekin'}: {selected_contact}")
       chat_container = st.container(height=350)
 
       st.session_state.chat_history = load_chats()
@@ -519,17 +521,18 @@ elif menu == t["sec3"]:
 
       if room_key not in st.session_state.chat_history:
         st.session_state.chat_history[room_key] = [
-            {"sender": selected_contact, "text": "¡Hola!"}
+            {"sender": selected_contact, "text": "¡Hola!" if st.session_state.lang == 'Español' else "Kaixo!"}
         ]
         save_chats(st.session_state.chat_history)
 
       with chat_container:
         for msg in st.session_state.chat_history[room_key]:
+          sender_label = "Tú" if msg['sender'] == st.session_state.username and st.session_state.lang == 'Español' else ("Zu" if msg['sender'] == st.session_state.username else msg['sender'])
           if msg["sender"] == st.session_state.username:
             st.markdown(
                 f"<div style='text-align: right; background-color:"
                 f" #DCF8C6; color: black; padding: 8px; border-radius: 10px;"
-                f" margin: 5px;'><b>Tú:</b> {msg['text']}</div>",
+                f" margin: 5px;'><b>{sender_label}:</b> {msg['text']}</div>",
                 unsafe_allow_html=True,
             )
           else:
@@ -571,12 +574,10 @@ elif menu == t["sec4"]:
 
       if st.button(t["cifrar_img_btn"]):
         img_bytes = uploaded_file.getvalue()
-        # 1. Clave única de la imagen
         clave_img = Fernet.generate_key()
         f_img = Fernet(clave_img)
         token_img_bytes = f_img.encrypt(img_bytes)
 
-        # 2. Empaquetar clave y bytes cifrados juntos
         paquete_img = {
             "key": clave_img.decode(),
             "data": token_img_bytes.decode(),
@@ -593,14 +594,12 @@ elif menu == t["sec4"]:
 
     if st.button(t["descifrar_img_btn"]):
       try:
-        # 1. Extraer clave y datos de manera automática del token completo
         json_decodificado = base64.b64decode(token_input.encode()).decode()
         paquete_img = json.loads(json_decodificado)
 
         clave_extraida = paquete_img["key"].encode()
         datos_cifrados = paquete_img["data"].encode()
 
-        # 2. Desencriptar usando la clave interna
         f_img = Fernet(clave_extraida)
         decrypted_bytes = f_img.decrypt(datos_cifrados)
 
