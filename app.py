@@ -7,7 +7,7 @@ import time
 import google.generativeai as genai
 import streamlit as st
 from cryptography.fernet import Fernet
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 # ====================================================
 # CONFIGURACIÓN SEGURA DE LA API KEY (DESDE SECRETS)
@@ -158,8 +158,7 @@ TRANSLATIONS = {
         "sec3": "3. Mini-WhatsApp (Chat)",
         "sec4": "4. Cifrado de Imágenes (Bits)",
         "sec5": "5. Papelera de Reciclaje",
-        "sec6": "6. Auditoría y Seguridad",
-        "admin_sec": "7. Panel de Administración (Juan)",
+        "admin_sec": "6. Panel de Administración (Juan)",
         "config": "Configuración",
         "ai_helper": "Asistente IA Rápido",
         "lang_label": "Idioma / Hizkuntza / Language / Langue",
@@ -219,7 +218,7 @@ TRANSLATIONS = {
         ),
         "img_cifrar_tab": "Cifrar Imagen",
         "img_descifrar_tab": "Descifrar Imagen",
-        "subir_img_label": "Sube una imagen (PNG o JPG):",
+        "subir_img_label": "Sube una imagen válida (PNG o JPG):",
         "cifrar_img_btn": "Cifrar Imagen (Autocontenida)",
         "img_cifrada_exito": (
             "¡Imagen cifrada con éxito! Este token incluye la imagen y su"
@@ -231,7 +230,10 @@ TRANSLATIONS = {
         "img_original_caption": "Imagen Original",
         "img_decrypted_success": "¡Imagen descifrada y restaurada con éxito!",
         "img_decrypted_caption": "Imagen Descifrada",
-        "img_error": "Error al descifrar la imagen: ",
+        "img_error": "Error al descifrar la imagen o archivo inválido: ",
+        "invalid_image_err": (
+            "El archivo subido no es una imagen válida o está dañado."
+        ),
         "ai_helper_desc": (
             "Gemini está conectado para ayudarte en esta sección."
         ),
@@ -276,18 +278,19 @@ TRANSLATIONS = {
         "item_purged": "¡Elemento purgado definitivamente!",
         "audit_title": "Auditoría y Seguridad de Cuenta",
         "audit_desc": (
-            "Historial de eventos y accesos registrados en tu cuenta."
+            "Historial de eventos y accesos registrados de los usuarios."
         ),
         "no_audit": "No hay registros de auditoría aún.",
         "audit_time": "Fecha y Hora",
         "audit_event": "Evento Registrado",
         "admin_title": "Panel de Administración",
         "admin_desc": (
-            "Control total de usuarios registrados, sesiones activas y"
-            " supervisión de chats."
+            "Control total de usuarios registrados, sesiones activas,"
+            " supervisión de chats y auditoría."
         ),
         "admin_tab1": "Cuentas y Conexiones",
         "admin_tab2": "Supervisión de Chats",
+        "admin_tab3": "Auditoría de Seguridad",
         "accounts_registered": "Cuentas Registradas y Estado Actual",
         "chats_registered_admin": "Conversaciones Privadas de los Usuarios",
         "no_chats_admin": "No hay chats registrados aún.",
@@ -314,8 +317,7 @@ TRANSLATIONS = {
         "sec3": "3. Mini-WhatsApp (Txata)",
         "sec4": "4. Irudiak Enkripatzea (Bitak)",
         "sec5": "5. Zakarrontzia",
-        "sec6": "6. Auditoria eta Segurtasuna",
-        "admin_sec": "7. Administrazio Panela (Juan)",
+        "admin_sec": "6. Administrazio Panela (Juan)",
         "config": "Konfigurazioa",
         "ai_helper": "AI Laguntzaile Azkarra",
         "lang_label": "Hizkuntza / Idioma / Language / Langue",
@@ -377,7 +379,7 @@ TRANSLATIONS = {
         ),
         "img_cifrar_tab": "Enkripatu Irudia",
         "img_descifrar_tab": "Desenkripatu Irudia",
-        "subir_img_label": "Igo irudi bat (PNG edo JPG):",
+        "subir_img_label": "Igo irudi baliogabea ez den beste irudi bat (PNG/JPG):",
         "cifrar_img_btn": "Enkripatu Irudia (Autoeustsia)",
         "img_cifrada_exito": (
             "Irudia arrakastaz enkripatu da! Token honek irudia eta gakoa"
@@ -389,7 +391,10 @@ TRANSLATIONS = {
         "img_original_caption": "Jatorrizko Irudia",
         "img_decrypted_success": "Irudia arrakastaz desenkripatu eta berreskuratu da!",
         "img_decrypted_caption": "Irudi Desenkripatua",
-        "img_error": "Errorea irudia desenkripatzean: ",
+        "img_error": "Errorea irudia desenkripatzean edo fitxategia okerra da: ",
+        "invalid_image_err": (
+            "Igotako fitxategia ez da baliozko irudia edo hondatuta dago."
+        ),
         "ai_helper_desc": (
             "Gemini konektatuta dago atal honetan laguntzeko."
         ),
@@ -399,7 +404,7 @@ TRANSLATIONS = {
         "ai_missing_key": "API Gakoa konfiguratu gabe dago Secret-etan.",
         "write_query": "Idatzi kontsulta bat.",
         "select_contact_prompt": (
-            "Hautatu edo gehitu kontaktua elkarrizketa ikusteko."
+            "Hautatu edo gehitu kontaktu bat elkarrizketa ikusteko."
         ),
         "contacts_header": "Kontaktuak",
         "user_exists_warn": "Erabiltzailea badago jada.",
@@ -433,17 +438,18 @@ TRANSLATIONS = {
         "item_restored": "Elementua arrakastaz berreskuratu da!",
         "item_purged": "Elementua behin betiko ezabatu da!",
         "audit_title": "Kontuaren Auditoria eta Segurtasuna",
-        "audit_desc": "Zure kontuan erregistratutako gertaera eta sarreren historia.",
+        "audit_desc": "Erabiltzaileen gertaera eta sarreren historia erregistratua.",
         "no_audit": "Ez dago auditoria erregistrorik oraindik.",
         "audit_time": "Data eta Ordua",
         "audit_event": "Erregistratutako Gertaera",
         "admin_title": "Administrazio Panela",
         "admin_desc": (
-            "Erregistratutako erabiltzaileen, saio aktiboen eta txaten"
-            " ikuskapenaren kontrol osoa."
+            "Erregistratutako erabiltzaileen, saio aktiboen, txaten"
+            " ikuskapenaren eta auditoriaren kontrol osoa."
         ),
         "admin_tab1": "Kontuak eta Konexioak",
         "admin_tab2": "Txaten Ikuskapena",
+        "admin_tab3": "Segurtasun Auditoria",
         "accounts_registered": "Erregistratutako Kontuak eta Egoera",
         "chats_registered_admin": "Erabiltzaileen Elkarrizketa Pribatuak",
         "no_chats_admin": "Ez dago txat erregistrorik oraindik.",
@@ -469,8 +475,7 @@ TRANSLATIONS = {
         "sec3": "3. Mini-WhatsApp (Chat)",
         "sec4": "4. Image Encryption (Bits)",
         "sec5": "5. Recycle Bin",
-        "sec6": "6. Audit & Security",
-        "admin_sec": "7. Admin Panel (Juan)",
+        "admin_sec": "6. Admin Panel (Juan)",
         "config": "Settings",
         "ai_helper": "Quick AI Assistant",
         "lang_label": "Language / Hizkuntza / Idioma / Langue",
@@ -531,7 +536,7 @@ TRANSLATIONS = {
         ),
         "img_cifrar_tab": "Encrypt Image",
         "img_descifrar_tab": "Decrypt Image",
-        "subir_img_label": "Upload an image (PNG or JPG):",
+        "subir_img_label": "Upload a valid image (PNG or JPG):",
         "cifrar_img_btn": "Encrypt Image (Self-contained)",
         "img_cifrada_exito": (
             "Image successfully encrypted! This token includes the image and"
@@ -543,7 +548,10 @@ TRANSLATIONS = {
         "img_original_caption": "Original Image",
         "img_decrypted_success": "Image successfully decrypted and restored!",
         "img_decrypted_caption": "Decrypted Image",
-        "img_error": "Error decrypting image: ",
+        "img_error": "Error decrypting image or invalid file: ",
+        "invalid_image_err": (
+            "The uploaded file is not a valid image or is corrupted."
+        ),
         "ai_helper_desc": "Gemini is connected to help you in this section.",
         "ai_query_label": "How can I help you?",
         "ai_query_btn": "Ask Gemini",
@@ -582,18 +590,19 @@ TRANSLATIONS = {
         "permanent_delete_btn": "Delete Permanently",
         "item_restored": "Item successfully restored!",
         "item_purged": "Item permanently deleted!",
-        "audit_title": "Account Audit & Security",
-        "audit_desc": "History of events and accesses recorded in your account.",
+        "audit_title": "Security Audit Log",
+        "audit_desc": "History of events and accesses recorded for users.",
         "no_audit": "No audit records yet.",
         "audit_time": "Date and Time",
         "audit_event": "Recorded Event",
         "admin_title": "Administration Panel",
         "admin_desc": (
-            "Total control of registered users, active sessions, and chat"
-            " supervision."
+            "Total control of registered users, active sessions, chat"
+            " supervision, and security audit."
         ),
         "admin_tab1": "Accounts & Connections",
         "admin_tab2": "Chat Supervision",
+        "admin_tab3": "Security Audit",
         "accounts_registered": "Registered Accounts and Current Status",
         "chats_registered_admin": "Private User Conversations",
         "no_chats_admin": "No chats recorded yet.",
@@ -620,8 +629,7 @@ TRANSLATIONS = {
         "sec3": "3. Mini-WhatsApp (Chat)",
         "sec4": "4. Chiffrement d'Images (Bits)",
         "sec5": "5. Corbeille",
-        "sec6": "6. Audit et Sécurité",
-        "admin_sec": "7. Panneau d'Administration (Juan)",
+        "admin_sec": "6. Panneau d'Administration (Juan)",
         "config": "Paramètres",
         "ai_helper": "Assistant IA Rapide",
         "lang_label": "Langue / Hizkuntza / Idioma / Language",
@@ -684,7 +692,7 @@ TRANSLATIONS = {
         ),
         "img_cifrar_tab": "Chiffrer l'Image",
         "img_descifrar_tab": "Déchiffrer l'Image",
-        "subir_img_label": "Téléchargez une image (PNG ou JPG) :",
+        "subir_img_label": "Téléchargez une image valide (PNG ou JPG) :",
         "cifrar_img_btn": "Chiffrer l'Image (Autonome)",
         "img_cifrada_exito": (
             "Image chiffrée avec succès ! Ce jeton comprend l'image et sa"
@@ -696,7 +704,12 @@ TRANSLATIONS = {
         "img_original_caption": "Image Originale",
         "img_decrypted_success": "Image déchiffrée et restaurée avec succès !",
         "img_decrypted_caption": "Image Déchiffrée",
-        "img_error": "Erreur lors du déchiffrement de l'image : ",
+        "img_error": (
+            "Erreur lors du déchiffrement de l'image ou fichier invalide : "
+        ),
+        "invalid_image_err": (
+            "Le fichier téléchargé n'est pas une image valide ou est endommagé."
+        ),
         "ai_helper_desc": "Gemini est connecté pour vous aider dans cette section.",
         "ai_query_label": "Comment puis-je vous aider ?",
         "ai_query_btn": "Demander à Gemini",
@@ -737,21 +750,22 @@ TRANSLATIONS = {
         "permanent_delete_btn": "Supprimer Définitivement",
         "item_restored": "Élément restauré avec succès !",
         "item_purged": "Élément purgé définitivement !",
-        "audit_title": "Audit et Sécurité du Compte",
+        "audit_title": "Journal d'Audit de Sécurité",
         "audit_desc": (
-            "Historique des événements et des accès enregistrés sur votre"
-            " compte."
+            "Historique des événements et des accès enregistrés pour les"
+            " utilisateurs."
         ),
         "no_audit": "Aucun enregistrement d'audit pour l'instant.",
         "audit_time": "Date et Heure",
         "audit_event": "Événement Enregistré",
         "admin_title": "Panneau d'Administration",
         "admin_desc": (
-            "Contrôle total des utilisateurs enregistrés, des sessions actives"
-            " et de la supervision des chats."
+            "Contrôle total des utilisateurs enregistrés, des sessions actives,"
+            " de la supervision des chats et de l'audit de sécurité."
         ),
         "admin_tab1": "Comptes et Connexions",
         "admin_tab2": "Supervision des Chats",
+        "admin_tab3": "Audit de Sécurité",
         "accounts_registered": "Comptes Enregistrés et État Actuel",
         "chats_registered_admin": "Conversations Privées des Utilisateurs",
         "no_chats_admin": "Aucun chat enregistré pour l'instant.",
@@ -836,14 +850,7 @@ if st.sidebar.button(t["logout"]):
 st.sidebar.markdown("---")
 st.sidebar.subheader(t["nav_title"])
 
-nav_options = [
-    t["sec1"],
-    t["sec2"],
-    t["sec3"],
-    t["sec4"],
-    t["sec5"],
-    t["sec6"],
-]
+nav_options = [t["sec1"], t["sec2"], t["sec3"], t["sec4"], t["sec5"]]
 if st.session_state.username == "Juan":
   nav_options.append(t["admin_sec"])
 nav_options.append(t["config"])
@@ -982,7 +989,9 @@ elif menu == t["sec3"]:
           all_contacts_db[nuevo_contacto] = other_contacts
           save_contacts(all_contacts_db)
 
-        log_audit_event(st.session_state.username, f"Contacto añadido: {nuevo_contacto}")
+        log_audit_event(
+            st.session_state.username, f"Contacto añadido: {nuevo_contacto}"
+        )
         st.success(t["contact_added"])
         st.rerun()
       else:
@@ -1031,7 +1040,9 @@ elif menu == t["sec3"]:
         })
         save_trash(trash_db)
 
-        log_audit_event(st.session_state.username, f"Contacto a papelera: {contact_to_delete}")
+        log_audit_event(
+            st.session_state.username, f"Contacto a papelera: {contact_to_delete}"
+        )
         st.success(t["contact_deleted_success"])
         st.rerun()
 
@@ -1101,7 +1112,7 @@ elif menu == t["sec3"]:
       st.info(t["select_contact_prompt"])
 
 # ----------------------------------------------------
-# SECCIÓN 4: CIFRADO DE IMÁGENES
+# SECCIÓN 4: CIFRADO DE IMÁGENES (CON CONTROL DE EXCEPCIÓN PIL)
 # ----------------------------------------------------
 elif menu == t["sec4"]:
   st.header("🖼️ " + t["img_title"])
@@ -1114,26 +1125,34 @@ elif menu == t["sec4"]:
         t["subir_img_label"], type=["png", "jpg", "jpeg"]
     )
     if uploaded_file is not None:
-      image = Image.open(uploaded_file)
-      st.image(image, caption=t["img_original_caption"], width=300)
+      try:
+        uploaded_file.seek(0)
+        image = Image.open(uploaded_file)
+        st.image(image, caption=t["img_original_caption"], width=300)
 
-      if st.button(t["cifrar_img_btn"]):
-        img_bytes = uploaded_file.getvalue()
-        clave_img = Fernet.generate_key()
-        f_img = Fernet(clave_img)
-        token_img_bytes = f_img.encrypt(img_bytes)
+        if st.button(t["cifrar_img_btn"]):
+          uploaded_file.seek(0)
+          img_bytes = uploaded_file.getvalue()
+          clave_img = Fernet.generate_key()
+          f_img = Fernet(clave_img)
+          token_img_bytes = f_img.encrypt(img_bytes)
 
-        paquete_img = {
-            "key": clave_img.decode(),
-            "data": token_img_bytes.decode(),
-        }
-        token_img_completo = base64.b64encode(
-            json.dumps(paquete_img).encode()
-        ).decode()
+          paquete_img = {
+              "key": clave_img.decode(),
+              "data": token_img_bytes.decode(),
+          }
+          token_img_completo = base64.b64encode(
+              json.dumps(paquete_img).encode()
+          ).decode()
 
-        log_audit_event(st.session_state.username, "Imagen cifrada")
-        st.success(t["img_cifrada_exito"])
-        st.text_area(t["token_img_label"], token_img_completo)
+          log_audit_event(st.session_state.username, "Imagen cifrada")
+          st.success(t["img_cifrada_exito"])
+          st.text_area(t["token_img_label"], token_img_completo)
+
+      except UnidentifiedImageError:
+        st.error(t["invalid_image_err"])
+      except Exception as e:
+        st.error(f"Error: {e}")
 
   with img_tab2:
     token_input = st.text_area(t["token_img_input"])
@@ -1174,7 +1193,9 @@ elif menu == t["sec5"]:
     for idx, item in enumerate(user_trash):
       col_t1, col_t2, col_t3 = st.columns([3, 1, 1])
       with col_t1:
-        st.markdown(f"**Contact / Kontaktua:** `{item['contact']}` — _({item['time']})_")
+        st.markdown(
+            f"**Contact / Kontaktua:** `{item['contact']}` — _({item['time']})_"
+        )
       with col_t2:
         if st.button(t["restore_btn"], key=f"res_{idx}"):
           contacts_db = load_contacts()
@@ -1193,7 +1214,9 @@ elif menu == t["sec5"]:
           trash_db[st.session_state.username] = user_trash
           save_trash(trash_db)
 
-          log_audit_event(st.session_state.username, f"Restaurado: {item['contact']}")
+          log_audit_event(
+              st.session_state.username, f"Restaurado: {item['contact']}"
+          )
           st.success(t["item_restored"])
           st.rerun()
 
@@ -1203,27 +1226,14 @@ elif menu == t["sec5"]:
           trash_db[st.session_state.username] = user_trash
           save_trash(trash_db)
 
-          log_audit_event(st.session_state.username, f"Purgado: {item['contact']}")
+          log_audit_event(
+              st.session_state.username, f"Purgado: {item['contact']}"
+          )
           st.success(t["item_purged"])
           st.rerun()
 
 # ----------------------------------------------------
-# SECCIÓN 6: AUDITORÍA Y SEGURIDAD
-# ----------------------------------------------------
-elif menu == t["sec6"]:
-  st.header("🛡️ " + t["audit_title"])
-  st.write(t["audit_desc"])
-
-  audit_data = load_audit()
-  user_audit = audit_data.get(st.session_state.username, [])
-
-  if not user_audit:
-    st.info(t["no_audit"])
-  else:
-    st.table(user_audit)
-
-# ----------------------------------------------------
-# SECCIÓN 7: PANEL DE ADMINISTRACIÓN (EXCLUSIVO PARA JUAN)
+# SECCIÓN 6: PANEL DE ADMINISTRACIÓN (EXCLUSIVO PARA JUAN)
 # ----------------------------------------------------
 elif menu == t["admin_sec"] and st.session_state.username == "Juan":
   st.header("🛡️ " + t["admin_title"])
@@ -1231,8 +1241,11 @@ elif menu == t["admin_sec"] and st.session_state.username == "Juan":
 
   users_db = load_users()
   all_chats = load_chats()
+  audit_data = load_audit()
 
-  admin_tab1, admin_tab2 = st.tabs([t["admin_tab1"], t["admin_tab2"]])
+  admin_tab1, admin_tab2, admin_tab3 = st.tabs(
+      [t["admin_tab1"], t["admin_tab2"], t["admin_tab3"]]
+  )
 
   with admin_tab1:
     st.subheader(t["accounts_registered"])
@@ -1265,6 +1278,22 @@ elif menu == t["admin_sec"] and st.session_state.username == "Juan":
         st.markdown(f"### 📁 {t['chat_between']}: **{user_a}** & **{user_b}**")
         for m in msgs:
           st.text(f"[{m['sender']}]: {m['text']}")
+        st.markdown("---")
+
+  with admin_tab3:
+    st.subheader(t["audit_title"])
+    st.write(t["audit_desc"])
+    if not audit_data:
+      st.info(t["no_audit"])
+    else:
+      for usr_acc, events in audit_data.items():
+        st.markdown(f"### 👤 Usuario: **{usr_acc}**")
+        event_rows = []
+        for ev in events:
+          event_rows.append(
+              {t["audit_time"]: ev["time"], t["audit_event"]: ev["event"]}
+          )
+        st.table(event_rows)
         st.markdown("---")
 
 # ----------------------------------------------------
