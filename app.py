@@ -7,11 +7,12 @@ import streamlit as st
 from cryptography.fernet import Fernet
 
 # ====================================================
-# CONFIGURACIÓN SEGURA DE LA API KEY (DESDE SECRETS DE STREAMLIT)
+# CONFIGURACIÓN SEGURA DE LA API KEY (DESDE SECRETS)
 # ====================================================
 try:
   genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-  gemini_model = genai.GenerativeModel("gemini-1.5-flash")
+  # Actualizado al modelo estándar actual compatible
+  gemini_model = genai.GenerativeModel("gemini-2.5-flash")
 except Exception:
   gemini_model = None
 
