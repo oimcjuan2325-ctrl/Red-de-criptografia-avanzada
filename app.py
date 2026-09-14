@@ -1,4 +1,6 @@
 import base64
+import json
+import os
 import time
 import streamlit as st
 from cryptography.fernet import Fernet
@@ -10,20 +12,63 @@ st.set_page_config(
     layout="wide",
 )
 
-# Inicializar estados de sesión si no existen
+# ----------------------------------------------------
+# FUNCIONES PARA PERSISTENCIA DE DATOS (JSON)
+# ----------------------------------------------------
+USERS_FILE = "users.json"
+CHATS_FILE = "chats.json"
+
+
+def load_users():
+  if os.path.exists(USERS_FILE):
+    with open(USERS_FILE, "r", encoding="utf-8") as f:
+      try:
+        return json.load(f)
+      except json.JSONDecodeError:
+        return {"Juan": "2325"}
+  return {"Juan": "2325"}  # Cuenta por defecto predeterminada
+
+
+def save_users(users):
+  with open(USERS_FILE, "w", encoding="utf-8") as f:
+    json.dump(users, f, ensure_ascii=False, indent=4)
+
+
+def load_chats():
+  if os.path.exists(CHATS_FILE):
+    with open(CHATS_FILE, "r", encoding="utf-8") as f:
+      try:
+        # Las claves en JSON se guardan como strings, luego las convertimos a tuplas si es necesario
+        data = json.load(f)
+        return {eval(k): v for k, v in data.items()}
+      except Exception:
+        return {}
+  return {}
+
+
+def save_chats(chats):
+  with open(CHATS_FILE, "w", encoding="utf-8") as f:
+    # Convertir tuplas de la clave a string para que JSON pueda guardarlas
+    data = {str(k): v for k, v in chats.items()}
+    json.dump(data, f, ensure_ascii=False, indent=4)
+
+
+# Inicializar estados de sesión
 if "logged_in" not in st.session_state:
   st.session_state.logged_in = False
 if "username" not in st.session_state:
   st.session_state.username = ""
 if "lang" not in st.session_state:
   st.session_state.lang = "Español"
+
+# Cargar usuarios y chats desde los archivos persistentes
 if "users_db" not in st.session_state:
-  # Base de datos inicial con Juan
-  st.session_state.users_db = {"Juan": "2325"}
-if "messages" not in st.session_state:
-  st.session_state.messages = []
+  st.session_state.users_db = load_users()
+
+if "chat_history" not in st.session_state:
+  st.session_state.chat_history = load_chats()
+
 if "contacts" not in st.session_state:
-  # Lista de contactos limpia (sin predeterminados como Mikel o Ana)
   st.session_state.contacts = []
 
 # Textos traducidos completos (Español y Euskera)
@@ -54,7 +99,7 @@ TRANSLATIONS = {
         "add_btn": "Agregar",
         "contact_added": "¡Contacto añadido!",
         "contact_exists": (
-            "El contacto ya está en tu lista o el campo está vacío."
+            "El contacto ya está en tu lista, es tu usuario o está vacío."
         ),
         "no_contacts": (
             "No tienes contactos aún. Agrega uno a la izquierda para empezar"
@@ -129,7 +174,8 @@ TRANSLATIONS = {
         "add_btn": "Gehitu",
         "contact_added": "Kontaktua gehituta!",
         "contact_exists": (
-            "Kontaktua zerrendan dago jada edo eremua hutsik dago."
+            "Kontaktua zerrendan dago jada, zure erabiltzailea da edo hutsik"
+            " dago."
         ),
         "no_contacts": (
             "Ez duzu kontakturik oraindik. Gehitu bat ezkerrean txateatzen"
@@ -194,6 +240,8 @@ if not st.session_state.logged_in:
       submit = st.form_submit_button(t["login_btn"])
 
       if submit:
+        # Recargar usuarios por si acaso se registró alguien en otra sesión
+        st.session_state.users_db = load_users()
         if (
             u_input in st.session_state.users_db
             and st.session_state.users_db[u_input] == p_input
@@ -211,12 +259,15 @@ if not st.session_state.logged_in:
       reg_submit = st.form_submit_button(t["register_btn"])
 
       if reg_submit:
+        st.session_state.users_db = load_users()
         if new_u in st.session_state.users_db:
           st.warning("El usuario ya existe. / Erabiltzailea badago jada.")
         elif new_u and new_p:
           st.session_state.users_db[new_u] = new_p
+          save_users(st.session_state.users_db)  # Guardar en disco permanentemente
           st.success(
-              "¡Cuenta creada con éxito! / Kontua arrakastaz sortu da!"
+              "¡Cuenta creada con éxito y guardada! / Kontua arrakastaz sortu"
+              " eta gorde da!"
           )
         else:
           st.error("Rellene todos los campos. / Bete eremu guztiak.")
@@ -350,15 +401,14 @@ elif menu == t["sec3"]:
       st.subheader(f"Chat con: {selected_contact}")
       chat_container = st.container(height=350)
 
-      if "chat_history" not in st.session_state:
-        st.session_state.chat_history = {}
-
+      st.session_state.chat_history = load_chats()
       room_key = tuple(sorted([st.session_state.username, selected_contact]))
 
       if room_key not in st.session_state.chat_history:
         st.session_state.chat_history[room_key] = [
             {"sender": selected_contact, "text": "¡Hola!"}
         ]
+        save_chats(st.session_state.chat_history)
 
       with chat_container:
         for msg in st.session_state.chat_history[room_key]:
@@ -384,6 +434,9 @@ elif menu == t["sec3"]:
           st.session_state.chat_history[room_key].append(
               {"sender": st.session_state.username, "text": mensaje_texto}
           )
+          save_chats(
+              st.session_state.chat_history
+          )  # Guardar mensajes en disco permanentemente
           st.rerun()
     else:
       st.info(
