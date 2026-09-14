@@ -1,4 +1,5 @@
 import base64
+import datetime
 import io
 import json
 import os
@@ -13,7 +14,7 @@ from PIL import Image
 # ====================================================
 try:
   genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-  gemini_model = genai.GenerativeModel("gemini-3.6-flash")
+  gemini_model = genai.GenerativeModel("gemini-1.5-flash")
 except Exception:
   gemini_model = None
 
@@ -30,6 +31,8 @@ st.set_page_config(
 USERS_FILE = "users.json"
 CHATS_FILE = "chats.json"
 CONTACTS_FILE = "contacts.json"
+TRASH_FILE = "trash.json"
+AUDIT_FILE = "audit.json"
 
 
 def load_users():
@@ -79,6 +82,41 @@ def save_contacts(contacts):
     json.dump(contacts, f, ensure_ascii=False, indent=4)
 
 
+def load_trash():
+  if os.path.exists(TRASH_FILE):
+    with open(TRASH_FILE, "r", encoding="utf-8") as f:
+      try:
+        return json.load(f)
+      except json.JSONDecodeError:
+        return {}
+  return {}
+
+
+def save_trash(trash):
+  with open(TRASH_FILE, "w", encoding="utf-8") as f:
+    json.dump(trash, f, ensure_ascii=False, indent=4)
+
+
+def load_audit():
+  if os.path.exists(AUDIT_FILE):
+    with open(AUDIT_FILE, "r", encoding="utf-8") as f:
+      try:
+        return json.load(f)
+      except json.JSONDecodeError:
+        return {}
+  return {}
+
+
+def log_audit_event(username, event_desc):
+  audit_data = load_audit()
+  if username not in audit_data:
+    audit_data[username] = []
+  timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+  audit_data[username].append({"time": timestamp, "event": event_desc})
+  with open(AUDIT_FILE, "w", encoding="utf-8") as f:
+    json.dump(audit_data, f, ensure_ascii=False, indent=4)
+
+
 # Inicializar estados de sesión
 if "logged_in" not in st.session_state:
   st.session_state.logged_in = False
@@ -86,6 +124,8 @@ if "username" not in st.session_state:
   st.session_state.username = ""
 if "lang" not in st.session_state:
   st.session_state.lang = "Español"
+if "login_attempts" not in st.session_state:
+  st.session_state.login_attempts = {}
 
 if "users_db" not in st.session_state:
   st.session_state.users_db = load_users()
@@ -93,7 +133,12 @@ if "users_db" not in st.session_state:
 if "chat_history" not in st.session_state:
   st.session_state.chat_history = load_chats()
 
-# Diccionario completo de traducciones para toda la interfaz (Español y Euskera)
+if "ai_chat_memory" not in st.session_state:
+  st.session_state.ai_chat_memory = []
+
+# ====================================================
+# DICCIONARIO COMPLETO DE TRADUCCIONES (ES, EU, EN, FR)
+# ====================================================
 TRANSLATIONS = {
     "Español": {
         "login_title": "Iniciar Sesión",
@@ -101,18 +146,23 @@ TRANSLATIONS = {
         "pass_label": "Contraseña",
         "login_btn": "Entrar",
         "login_error": "Usuario o contraseña incorrectos",
+        "account_locked": (
+            "Cuenta bloqueada temporalmente por múltiples intentos fallidos."
+        ),
         "register_txt": "¿No tienes cuenta? Regístrate aquí",
         "register_btn": "Registrarse",
         "logout": "Cerrar Sesión",
         "nav_title": "Menú Principal",
         "sec1": "1. Cifrado y Descifrado Potente",
-        "sec2": "2. Base de Descifrado Inteligente (IA)",
+        "sec2": "2. Chatbot IA con Memoria (Gemini)",
         "sec3": "3. Mini-WhatsApp (Chat)",
         "sec4": "4. Cifrado de Imágenes (Bits)",
-        "admin_sec": "5. Panel de Administración (Juan)",
+        "sec5": "5. Papelera de Reciclaje",
+        "sec6": "6. Auditoría y Seguridad",
+        "admin_sec": "7. Panel de Administración (Juan)",
         "config": "Configuración",
-        "ai_helper": "Asistente IA",
-        "lang_label": "Idioma / Hizkuntza",
+        "ai_helper": "Asistente IA Rápido",
+        "lang_label": "Idioma / Hizkuntza / Language / Langue",
         "save_config": "Guardar cambios",
         "config_success": "¡Idioma actualizado y web reiniciada con éxito!",
         "chat_title": "Mini-WhatsApp",
@@ -153,15 +203,15 @@ TRANSLATIONS = {
         "descifrar_btn": "Descifrar Token",
         "descifrar_exito": "¡Descifrado con éxito!",
         "texto_original": "Texto Original:",
-        "ia_title": "Base de Descifrado Inteligente con IA (Gemini)",
+        "ia_title": "Chatbot IA Avanzado con Memoria (Gemini)",
         "ia_desc": (
-            "Pega cualquier mensaje cifrado y Gemini lo analizará,"
-            " descifrará y explicará el paso a paso."
+            "Mantén una conversación fluida con memoria de contexto sobre"
+            " ciberseguridad, cifrado y consultas generales."
         ),
-        "ia_input": "Introduce el mensaje cifrado misterioso:",
-        "ia_btn": "Analizar y Descifrar con Gemini",
-        "ia_spinner": "Gemini está analizando el cifrado...",
-        "ia_result": "¡Análisis completado por Gemini!",
+        "ia_input": "Escribe tu mensaje para Gemini...",
+        "ia_btn": "Enviar a Gemini",
+        "ia_spinner": "Gemini está procesando tu respuesta...",
+        "ai_clear_btn": "Limpiar Historial de Chat",
         "img_title": "Cifrado de Imágenes a Nivel de Bits",
         "img_desc": (
             "Sube una imagen, conviértela a binario y empaqueta la clave de"
@@ -177,7 +227,7 @@ TRANSLATIONS = {
         ),
         "token_img_label": "Token completo de la imagen cifrada:",
         "token_img_input": "Introduce el token completo de la imagen:",
-        "descifrar_img_btn": "Descifrar y Restaurar Imagen",
+        "descifrar_img_btn": "Desenkripatu y Restaurar Imagen",
         "img_original_caption": "Imagen Original",
         "img_decrypted_success": "¡Imagen descifrada y restaurada con éxito!",
         "img_decrypted_caption": "Imagen Descifrada",
@@ -208,10 +258,42 @@ TRANSLATIONS = {
         "account_deleted_chat_msg": (
             "Esta cuenta ha sido borrada, ya no puedes chatear con esa cuenta."
         ),
-        "delete_contact_btn": "Borrar contacto",
-        "contact_deleted_success": "Contacto y chats eliminados correctamente.",
+        "delete_contact_btn": "Enviar a la papelera",
+        "contact_deleted_success": (
+            "Contacto y chats enviados a la papelera correctamente."
+        ),
         "del_contact_section": "Eliminar Contacto",
         "select_to_delete": "Selecciona contacto a eliminar:",
+        "trash_title": "Papelera de Reciclaje",
+        "trash_desc": (
+            "Aquí puedes restaurar tus contactos y chats eliminados o"
+            " borrarlos permanentemente."
+        ),
+        "no_trash": "La papelera está vacía.",
+        "restore_btn": "Restaurar",
+        "permanent_delete_btn": "Borrar Definitivamente",
+        "item_restored": "¡Elemento restaurado con éxito!",
+        "item_purged": "¡Elemento purgado definitivamente!",
+        "audit_title": "Auditoría y Seguridad de Cuenta",
+        "audit_desc": (
+            "Historial de eventos y accesos registrados en tu cuenta."
+        ),
+        "no_audit": "No hay registros de auditoría aún.",
+        "audit_time": "Fecha y Hora",
+        "audit_event": "Evento Registrado",
+        "admin_title": "Panel de Administración",
+        "admin_desc": (
+            "Control total de usuarios registrados, sesiones activas y"
+            " supervisión de chats."
+        ),
+        "admin_tab1": "Cuentas y Conexiones",
+        "admin_tab2": "Supervisión de Chats",
+        "accounts_registered": "Cuentas Registradas y Estado Actual",
+        "chats_registered_admin": "Conversaciones Privadas de los Usuarios",
+        "no_chats_admin": "No hay chats registrados aún.",
+        "chat_between": "Conversación entre",
+        "expulsar_btn": "expulsar",
+        "user_expulsado": "Usuario expulsado/eliminado.",
     },
     "Euskera": {
         "login_title": "Saioa Hasi",
@@ -219,18 +301,24 @@ TRANSLATIONS = {
         "pass_label": "Pasahitza",
         "login_btn": "Sartu",
         "login_error": "Erabiltzaile edo pasahitz okerra",
+        "account_locked": (
+            "Kontua aldi baterako blokeatuta dago huts egindako saiakera"
+            " anitzengatik."
+        ),
         "register_txt": "Ez duzu konturik? Erregistratu hemen",
         "register_btn": "Erregistratu",
         "logout": "Saioa Itxi",
         "nav_title": "Menu Nagusia",
         "sec1": "1. Enkripzio eta Desenkripzio Indartsua",
-        "sec2": "2. Desenkripzio Adimendunaren Basea (AI)",
+        "sec2": "2. Memoriadun AI Chatbota (Gemini)",
         "sec3": "3. Mini-WhatsApp (Txata)",
         "sec4": "4. Irudiak Enkripatzea (Bitak)",
-        "admin_sec": "5. Administrazio Panela (Juan)",
+        "sec5": "5. Zakarrontzia",
+        "sec6": "6. Auditoria eta Segurtasuna",
+        "admin_sec": "7. Administrazio Panela (Juan)",
         "config": "Konfigurazioa",
-        "ai_helper": "AI Laguntzailea",
-        "lang_label": "Hizkuntza / Idioma",
+        "ai_helper": "AI Laguntzaile Azkarra",
+        "lang_label": "Hizkuntza / Idioma / Language / Langue",
         "save_config": "Gorde aldaketak",
         "config_success": (
             "Hizkuntza eguneratuta eta webgunea berrabiarazi da arrakastaz!"
@@ -273,15 +361,15 @@ TRANSLATIONS = {
         "descifrar_btn": "Desenkripatu Tokena",
         "descifrar_exito": "Arrakastaz desenkripatua!",
         "texto_original": "Jatorrizko Testua:",
-        "ia_title": "Desenkripzio Adimendunaren Basea AI-rekin (Gemini)",
+        "ia_title": "Memoriadun AI Chatbot Aurreratua (Gemini)",
         "ia_desc": (
-            "Itsatsi edzein mezu eta Gemini-k aztertuko du, desenkripatu eta"
-            " urratsez urrats azalduko du."
+            "Mantendu elkarrizketa arina testuinguru-memoriarekin"
+            " zibersegurtasunari, enkripzioari eta kontsulta orokorrei buruz."
         ),
-        "ia_input": "Sartu mezu enkripatu misteriotsua:",
-        "ia_btn": "Aztertu eta Desenkripatu Gemini-rekin",
-        "ia_spinner": "Gemini enkripzioa aztertzen ari da...",
-        "ia_result": "Gemini-k analisia osatu du!",
+        "ia_input": "Idatzi zure mezua Gemini-rentzat...",
+        "ia_btn": "Bidali Gemini-ri",
+        "ia_spinner": "Gemini zure erantzuna prozesatzen ari da...",
+        "ai_clear_btn": "Garbitu Txataren Historia",
         "img_title": "Irudiak Bit Mailan Enkripatzea",
         "img_desc": (
             "Igo irudi bat, bihurtu bit-fluxu eta paketatu segurtasun gakoa"
@@ -311,7 +399,7 @@ TRANSLATIONS = {
         "ai_missing_key": "API Gakoa konfiguratu gabe dago Secret-etan.",
         "write_query": "Idatzi kontsulta bat.",
         "select_contact_prompt": (
-            "Hautatu edo gehitu kontaktu bat elkarrizketa ikusteko."
+            "Hautatu edo gehitu kontaktua elkarrizketa ikusteko."
         ),
         "contacts_header": "Kontaktuak",
         "user_exists_warn": "Erabiltzailea badago jada.",
@@ -328,12 +416,348 @@ TRANSLATIONS = {
             "Kontu hau ezabatua izan da, ezin duzu jada kontu horrekin"
             " txateatu."
         ),
-        "delete_contact_btn": "Ezabatu kontaktua",
+        "delete_contact_btn": "Bidali zakarrontzira",
         "contact_deleted_success": (
-            "Kontaktua eta txatak arrakastaz ezabatu dira."
+            "Kontaktua eta txatak zakarrontzira bidali dira arrakastaz."
         ),
         "del_contact_section": "Ezabatu Kontaktua",
         "select_to_delete": "Hautatu ezabatzeko kontaktua:",
+        "trash_title": "Zakarrontzia",
+        "trash_desc": (
+            "Hemen ezabatutako kontaktuak eta txatak berreskuratu edo betiko"
+            " ezabatu ditzakezu."
+        ),
+        "no_trash": "Zakarrontzia hutsik dago.",
+        "restore_btn": "Berreskuratu",
+        "permanent_delete_btn": "Ezabatu Betiko",
+        "item_restored": "Elementua arrakastaz berreskuratu da!",
+        "item_purged": "Elementua behin betiko ezabatu da!",
+        "audit_title": "Kontuaren Auditoria eta Segurtasuna",
+        "audit_desc": "Zure kontuan erregistratutako gertaera eta sarreren historia.",
+        "no_audit": "Ez dago auditoria erregistrorik oraindik.",
+        "audit_time": "Data eta Ordua",
+        "audit_event": "Erregistratutako Gertaera",
+        "admin_title": "Administrazio Panela",
+        "admin_desc": (
+            "Erregistratutako erabiltzaileen, saio aktiboen eta txaten"
+            " ikuskapenaren kontrol osoa."
+        ),
+        "admin_tab1": "Kontuak eta Konexioak",
+        "admin_tab2": "Txaten Ikuskapena",
+        "accounts_registered": "Erregistratutako Kontuak eta Egoera",
+        "chats_registered_admin": "Erabiltzaileen Elkarrizketa Pribatuak",
+        "no_chats_admin": "Ez dago txat erregistrorik oraindik.",
+        "chat_between": "Elkarrizketa honen artean",
+        "expulsar_btn": "kanporatu",
+        "user_expulsado": "erabiltzailea kanporatu da.",
+    },
+    "English": {
+        "login_title": "Sign In",
+        "user_label": "Username",
+        "pass_label": "Password",
+        "login_btn": "Login",
+        "login_error": "Incorrect username or password",
+        "account_locked": (
+            "Account temporarily locked due to multiple failed attempts."
+        ),
+        "register_txt": "Don't have an account? Register here",
+        "register_btn": "Register",
+        "logout": "Log Out",
+        "nav_title": "Main Menu",
+        "sec1": "1. Powerful Encryption & Decryption",
+        "sec2": "2. AI Chatbot with Memory (Gemini)",
+        "sec3": "3. Mini-WhatsApp (Chat)",
+        "sec4": "4. Image Encryption (Bits)",
+        "sec5": "5. Recycle Bin",
+        "sec6": "6. Audit & Security",
+        "admin_sec": "7. Admin Panel (Juan)",
+        "config": "Settings",
+        "ai_helper": "Quick AI Assistant",
+        "lang_label": "Language / Hizkuntza / Idioma / Langue",
+        "save_config": "Save changes",
+        "config_success": "Language updated and web successfully restarted!",
+        "chat_title": "Mini-WhatsApp",
+        "chat_desc": (
+            "Chat with other users by adding them via their existing account"
+            " name."
+        ),
+        "add_contact_label": "Add contact by name:",
+        "add_btn": "Add",
+        "contact_added": "Contact successfully added!",
+        "contact_not_found": (
+            "Error: User does not exist in the database, is already in your"
+            " contacts, or is your own user."
+        ),
+        "no_contacts": (
+            "You have no contacts yet. Add an existing one on the left to"
+            " start chatting."
+        ),
+        "select_chat": "Select chat:",
+        "your_chats": "Your Chats",
+        "type_msg": "Type a message...",
+        "send_btn": "Send 📤",
+        "cifrado_title": "Powerful Encryption & Decryption (AES)",
+        "cifrado_desc": (
+            "Use advanced symmetric encryption (Fernet) to protect your"
+            " messages by embedding the key inside the token."
+        ),
+        "cifrar_tab": "Encrypt Message",
+        "descifrar_tab": "Decrypt Message",
+        "texto_plano_label": "Enter the text you want to encrypt:",
+        "cifrar_btn": "Encrypt Message (Self-contained)",
+        "cifrado_exito": (
+            "Text successfully encrypted! The key is already embedded in the"
+            " token:"
+        ),
+        "texto_cifrado_label": (
+            "Enter the complete encrypted token (includes key and data):"
+        ),
+        "descifrar_btn": "Decrypt Token",
+        "descifrar_exito": "Successfully decrypted!",
+        "texto_original": "Original Text:",
+        "ia_title": "Advanced AI Chatbot with Memory (Gemini)",
+        "ia_desc": (
+            "Maintain a smooth conversation with context memory about"
+            " cybersecurity, encryption, and general inquiries."
+        ),
+        "ia_input": "Type your message for Gemini...",
+        "ia_btn": "Send to Gemini",
+        "ia_spinner": "Gemini is processing your response...",
+        "ai_clear_btn": "Clear Chat History",
+        "img_title": "Bit-Level Image Encryption",
+        "img_desc": (
+            "Upload an image, convert it to binary, and bundle the security"
+            " key into a single encrypted token."
+        ),
+        "img_cifrar_tab": "Encrypt Image",
+        "img_descifrar_tab": "Decrypt Image",
+        "subir_img_label": "Upload an image (PNG or JPG):",
+        "cifrar_img_btn": "Encrypt Image (Self-contained)",
+        "img_cifrada_exito": (
+            "Image successfully encrypted! This token includes the image and"
+            " its key:"
+        ),
+        "token_img_label": "Full encrypted image token:",
+        "token_img_input": "Enter the full image token:",
+        "descifrar_img_btn": "Decrypt and Restore Image",
+        "img_original_caption": "Original Image",
+        "img_decrypted_success": "Image successfully decrypted and restored!",
+        "img_decrypted_caption": "Decrypted Image",
+        "img_error": "Error decrypting image: ",
+        "ai_helper_desc": "Gemini is connected to help you in this section.",
+        "ai_query_label": "How can I help you?",
+        "ai_query_btn": "Ask Gemini",
+        "ai_thinking": "Gemini thinking...",
+        "ai_missing_key": "API Key is missing in Secrets.",
+        "write_query": "Write a query.",
+        "select_contact_prompt": "Select or add a contact to view the chat.",
+        "contacts_header": "Contacts",
+        "user_exists_warn": "User already exists.",
+        "account_created": "Account successfully created!",
+        "fill_fields": "Please fill in all fields.",
+        "nav_sidebar": "Navigation",
+        "same_lang_info": "Selected language is the same.",
+        "ai_helper_prompt": (
+            "You are on a cybersecurity website in the '{menu}' section."
+            " Answer the following user query speaking strictly in ENGLISH:"
+            " {ai_query}"
+        ),
+        "calc_link": "🔗 **[calculator with AI](https://calculadora-con-ia.streamlit.app)**",
+        "account_deleted_chat_msg": (
+            "This account has been deleted, you can no longer chat with it."
+        ),
+        "delete_contact_btn": "Send to recycle bin",
+        "contact_deleted_success": (
+            "Contact and chats successfully sent to recycle bin."
+        ),
+        "del_contact_section": "Delete Contact",
+        "select_to_delete": "Select contact to delete:",
+        "trash_title": "Recycle Bin",
+        "trash_desc": (
+            "Here you can restore your deleted contacts and chats or delete"
+            " them permanently."
+        ),
+        "no_trash": "Recycle bin is empty.",
+        "restore_btn": "Restore",
+        "permanent_delete_btn": "Delete Permanently",
+        "item_restored": "Item successfully restored!",
+        "item_purged": "Item permanently deleted!",
+        "audit_title": "Account Audit & Security",
+        "audit_desc": "History of events and accesses recorded in your account.",
+        "no_audit": "No audit records yet.",
+        "audit_time": "Date and Time",
+        "audit_event": "Recorded Event",
+        "admin_title": "Administration Panel",
+        "admin_desc": (
+            "Total control of registered users, active sessions, and chat"
+            " supervision."
+        ),
+        "admin_tab1": "Accounts & Connections",
+        "admin_tab2": "Chat Supervision",
+        "accounts_registered": "Registered Accounts and Current Status",
+        "chats_registered_admin": "Private User Conversations",
+        "no_chats_admin": "No chats recorded yet.",
+        "chat_between": "Conversation between",
+        "expulsar_btn": "kick",
+        "user_expulsado": "user kicked/deleted.",
+    },
+    "Français": {
+        "login_title": "Connexion",
+        "user_label": "Nom d'utilisateur",
+        "pass_label": "Mot de passe",
+        "login_btn": "Entrer",
+        "login_error": "Nom d'utilisateur ou mot de passe incorrect",
+        "account_locked": (
+            "Compte temporairement bloqué en raison de multiples tentatives"
+            " échouées."
+        ),
+        "register_txt": "Vous n'avez pas de compte ? Inscrivez-vous ici",
+        "register_btn": "S'inscrire",
+        "logout": "Se déconnecter",
+        "nav_title": "Menu Principal",
+        "sec1": "1. Chiffrement et Déchiffrement Puissant",
+        "sec2": "2. Chatbot IA avec Mémoire (Gemini)",
+        "sec3": "3. Mini-WhatsApp (Chat)",
+        "sec4": "4. Chiffrement d'Images (Bits)",
+        "sec5": "5. Corbeille",
+        "sec6": "6. Audit et Sécurité",
+        "admin_sec": "7. Panneau d'Administration (Juan)",
+        "config": "Paramètres",
+        "ai_helper": "Assistant IA Rapide",
+        "lang_label": "Langue / Hizkuntza / Idioma / Language",
+        "save_config": "Enregistrer les modifications",
+        "config_success": (
+            "Langue mise à jour et site Web redémarré avec succès !"
+        ),
+        "chat_title": "Mini-WhatsApp",
+        "chat_desc": (
+            "Discutez avec d'autres utilisateurs en les ajoutant via leur nom"
+            " de compte existant."
+        ),
+        "add_contact_label": "Ajouter un contact par nom :",
+        "add_btn": "Ajouter",
+        "contact_added": "Contact ajouté avec succès !",
+        "contact_not_found": (
+            "Erreur : L'utilisateur n'existe pas dans la base de données, est"
+            " déjà dans vos contacts ou est votre propre utilisateur."
+        ),
+        "no_contacts": (
+            "Vous n'avez pas encore de contacts. Ajoutez-en un existant à"
+            " gauche pour commencer à discuter."
+        ),
+        "select_chat": "Sélectionner le chat :",
+        "your_chats": "Vos Chats",
+        "type_msg": "Écrivez un message...",
+        "send_btn": "Envoyer 📤",
+        "cifrado_title": "Chiffrement et Déchiffrement Puissant (AES)",
+        "cifrado_desc": (
+            "Utilisez un chiffrement symétrique avancé (Fernet) pour protéger"
+            " vos messages en intégrant la clé dans le jeton."
+        ),
+        "cifrar_tab": "Chiffrer le Message",
+        "descifrar_tab": "Déchiffrer le Message",
+        "texto_plano_label": "Entrez le texte que vous souhaitez chiffrer :",
+        "cifrar_btn": "Chiffrer le Message (Autonome)",
+        "cifrado_exito": (
+            "Texte chiffré avec succès ! La clé est déjà intégrée dans le"
+            " jeton :"
+        ),
+        "texto_cifrado_label": (
+            "Entrez le jeton chiffré complet (inclut la clé et les données) :"
+        ),
+        "descifrar_btn": "Déchiffrer le Jeton",
+        "descifrar_exito": "Déchiffré avec succès !",
+        "texto_original": "Texte Original :",
+        "ia_title": "Chatbot IA Avancé avec Mémoire (Gemini)",
+        "ia_desc": (
+            "Maintenez une conversation fluide avec mémoire contextuelle sur"
+            " la cybersécurité, le chiffrement et les questions générales."
+        ),
+        "ia_input": "Écrivez votre message pour Gemini...",
+        "ia_btn": "Envoyer à Gemini",
+        "ia_spinner": "Gemini traite votre réponse...",
+        "ai_clear_btn": "Effacer l'historique du chat",
+        "img_title": "Chiffrement d'Images au Niveau des Bits",
+        "img_desc": (
+            "Téléchargez une image, convertissez-la en binaire et regroupez"
+            " la clé de sécurité dans un jeton chiffré unique."
+        ),
+        "img_cifrar_tab": "Chiffrer l'Image",
+        "img_descifrar_tab": "Déchiffrer l'Image",
+        "subir_img_label": "Téléchargez une image (PNG ou JPG) :",
+        "cifrar_img_btn": "Chiffrer l'Image (Autonome)",
+        "img_cifrada_exito": (
+            "Image chiffrée avec succès ! Ce jeton comprend l'image et sa"
+            " clé :"
+        ),
+        "token_img_label": "Jeton complet de l'image chiffrée :",
+        "token_img_input": "Entrez le jeton complet de l'image :",
+        "descifrar_img_btn": "Déchiffrer et Restaurer l'Image",
+        "img_original_caption": "Image Originale",
+        "img_decrypted_success": "Image déchiffrée et restaurée avec succès !",
+        "img_decrypted_caption": "Image Déchiffrée",
+        "img_error": "Erreur lors du déchiffrement de l'image : ",
+        "ai_helper_desc": "Gemini est connecté pour vous aider dans cette section.",
+        "ai_query_label": "Comment puis-je vous aider ?",
+        "ai_query_btn": "Demander à Gemini",
+        "ai_thinking": "Gemini réfléchit...",
+        "ai_missing_key": "La clé API est manquante dans les Secrets.",
+        "write_query": "Écrivez une requête.",
+        "select_contact_prompt": (
+            "Sélectionnez ou ajoutez un contact pour voir la conversation."
+        ),
+        "contacts_header": "Contacts",
+        "user_exists_warn": "L'utilisateur existe déjà.",
+        "account_created": "Compte créé avec succès !",
+        "fill_fields": "Veuillez remplir tous les champs.",
+        "nav_sidebar": "Navigation",
+        "same_lang_info": "La langue sélectionnée est la même.",
+        "ai_helper_prompt": (
+            "Vous êtes sur un site de cybersécurité dans la section '{menu}'."
+            " Répondez à la requête suivante de l'utilisateur en parlant"
+            " strictement en FRANÇAIS : {ai_query}"
+        ),
+        "calc_link": "🔗 **[calculatrice avec IA](https://calculadora-con-ia.streamlit.app)**",
+        "account_deleted_chat_msg": (
+            "Ce compte a été supprimé, vous ne pouvez plus discuter avec lui."
+        ),
+        "delete_contact_btn": "Envoyer à la corbeille",
+        "contact_deleted_success": (
+            "Contact et chats envoyés à la corbeille avec succès."
+        ),
+        "del_contact_section": "Supprimer le Contact",
+        "select_to_delete": "Sélectionnez le contact à supprimer :",
+        "trash_title": "Corbeille",
+        "trash_desc": (
+            "Ici, vous pouvez restaurer vos contacts et chats supprimés ou les"
+            " supprimer définitivement."
+        ),
+        "no_trash": "La corbeille est vide.",
+        "restore_btn": "Restaurer",
+        "permanent_delete_btn": "Supprimer Définitivement",
+        "item_restored": "Élément restauré avec succès !",
+        "item_purged": "Élément purgé définitivement !",
+        "audit_title": "Audit et Sécurité du Compte",
+        "audit_desc": (
+            "Historique des événements et des accès enregistrés sur votre"
+            " compte."
+        ),
+        "no_audit": "Aucun enregistrement d'audit pour l'instant.",
+        "audit_time": "Date et Heure",
+        "audit_event": "Événement Enregistré",
+        "admin_title": "Panneau d'Administration",
+        "admin_desc": (
+            "Contrôle total des utilisateurs enregistrés, des sessions actives"
+            " et de la supervision des chats."
+        ),
+        "admin_tab1": "Comptes et Connexions",
+        "admin_tab2": "Supervision des Chats",
+        "accounts_registered": "Comptes Enregistrés et État Actuel",
+        "chats_registered_admin": "Conversations Privées des Utilisateurs",
+        "no_chats_admin": "Aucun chat enregistré pour l'instant.",
+        "chat_between": "Conversation entre",
+        "expulsar_btn": "expulser",
+        "user_expulsado": "utilisateur expulsé/supprimé.",
     },
 }
 
@@ -360,14 +784,22 @@ if not st.session_state.logged_in:
       submit = st.form_submit_button(t["login_btn"])
 
       if submit:
-        users_db = load_users()
-        if u_input in users_db and users_db[u_input] == p_input:
-          st.session_state.logged_in = True
-          st.session_state.username = u_input
-          st.session_state.active_sessions.add(u_input)
-          st.rerun()
+        fails = st.session_state.login_attempts.get(u_input, 0)
+        if fails >= 3:
+          st.error(t["account_locked"])
         else:
-          st.error(t["login_error"])
+          users_db = load_users()
+          if u_input in users_db and users_db[u_input] == p_input:
+            st.session_state.login_attempts[u_input] = 0
+            st.session_state.logged_in = True
+            st.session_state.username = u_input
+            st.session_state.active_sessions.add(u_input)
+            log_audit_event(u_input, "Sesión iniciada / Saioa hasi da")
+            st.rerun()
+          else:
+            st.session_state.login_attempts[u_input] = fails + 1
+            log_audit_event(u_input, "Intento fallido / Saiakera okerra")
+            st.error(t["login_error"])
 
   with tab2:
     with st.form("reg_form"):
@@ -382,6 +814,7 @@ if not st.session_state.logged_in:
         elif new_u and new_p:
           users_db[new_u] = new_p
           save_users(users_db)
+          log_audit_event(new_u, "Cuenta creada / Kontua sortu da")
           st.success(t["account_created"])
         else:
           st.error(t["fill_fields"])
@@ -393,6 +826,7 @@ if not st.session_state.logged_in:
 # ----------------------------------------------------
 st.sidebar.title(f"👤 {st.session_state.username}")
 if st.sidebar.button(t["logout"]):
+  log_audit_event(st.session_state.username, "Cierre de sesión / Saioa itxi")
   if st.session_state.username in st.session_state.active_sessions:
     st.session_state.active_sessions.remove(st.session_state.username)
   st.session_state.logged_in = False
@@ -402,7 +836,14 @@ if st.sidebar.button(t["logout"]):
 st.sidebar.markdown("---")
 st.sidebar.subheader(t["nav_title"])
 
-nav_options = [t["sec1"], t["sec2"], t["sec3"], t["sec4"]]
+nav_options = [
+    t["sec1"],
+    t["sec2"],
+    t["sec3"],
+    t["sec4"],
+    t["sec5"],
+    t["sec6"],
+]
 if st.session_state.username == "Juan":
   nav_options.append(t["admin_sec"])
 nav_options.append(t["config"])
@@ -419,12 +860,7 @@ if menu == t["sec1"]:
   sub_tab1, sub_tab2 = st.tabs([t["cifrar_tab"], t["descifrar_tab"]])
 
   with sub_tab1:
-    texto_plano = st.text_area(
-        t["texto_plano_label"],
-        "Mezu sekretua"
-        if st.session_state.lang == "Euskera"
-        else "Mensaje secreto",
-    )
+    texto_plano = st.text_area(t["texto_plano_label"], "Mensaje secreto")
     if st.button(t["cifrar_btn"]):
       clave_dinamica = Fernet.generate_key()
       f = Fernet(clave_dinamica)
@@ -437,6 +873,7 @@ if menu == t["sec1"]:
       paquete_json = json.dumps(paquete)
       token_completo = base64.b64encode(paquete_json.encode()).decode()
 
+      log_audit_event(st.session_state.username, "Mensaje cifrado")
       st.success(t["cifrado_exito"])
       st.code(token_completo)
 
@@ -453,54 +890,65 @@ if menu == t["sec1"]:
         f = Fernet(clave_extraida)
         decrypted = f.decrypt(datos_cifrados)
 
+        log_audit_event(st.session_state.username, "Mensaje descifrado")
         st.success(t["descifrar_exito"])
         st.write(f"**{t['texto_original']}**", decrypted.decode())
       except Exception as e:
         st.error(f"Error: {e}")
 
 # ----------------------------------------------------
-# SECCIÓN 2: BASE DE DESCIFRADO INTELIGENTE CON GEMINI
+# SECCIÓN 2: CHATBOT IA CON MEMORIA (ESTILO CHATGPT)
 # ----------------------------------------------------
 elif menu == t["sec2"]:
-  st.header("🕵️‍♂️ " + t["ia_title"])
+  st.header("🤖 " + t["ia_title"])
   st.write(t["ia_desc"])
 
-  cifrado_usuario = st.text_area(t["ia_input"])
+  if st.button(t["ai_clear_btn"]):
+    st.session_state.ai_chat_memory = []
+    st.rerun()
 
-  if st.button(t["ia_btn"]):
-    if not cifrado_usuario:
-      st.warning(
-          "Mesedez, idatzi testu bat."
-          if st.session_state.lang == "Euskera"
-          else "Por favor, introduce un texto."
-      )
-    elif not gemini_model:
-      st.error(
-          "API Gakoa konfiguratu gabe dago Secret-etan."
-          if st.session_state.lang == "Euskera"
-          else "La API Key no está configurada en los Secrets de Streamlit"
-          " Cloud."
-      )
+  for message in st.session_state.ai_chat_memory:
+    with st.chat_message(message["role"]):
+      st.markdown(message["content"])
+
+  if prompt_ia := st.chat_input(t["ia_input"]):
+    if not gemini_model:
+      st.error(t["ai_missing_key"])
     else:
-      with st.spinner(t["ia_spinner"]):
-        try:
-          if st.session_state.lang == "Euskera":
-            prompt = (
-                "Aztertu ondorengo testu enkripatua edo kodetua. Detektatu"
-                " enkripzio mota, itzuli desenkripatuta eta azaldu urratsez"
-                f" urrats euskaraz soilik. Testua: {cifrado_usuario}"
+      st.session_state.ai_chat_memory.append(
+          {"role": "user", "content": prompt_ia}
+      )
+      with st.chat_message("user"):
+        st.markdown(prompt_ia)
+
+      with st.chat_message("assistant"):
+        with st.spinner(t["ia_spinner"]):
+          try:
+            chat_session = gemini_model.start_chat(history=[])
+            history_formatted = []
+            for m in st.session_state.ai_chat_memory[:-1]:
+              history_formatted.append(
+                  {
+                      "role": "user" if m["role"] == "user" else "model",
+                      "parts": [m["content"]],
+                  }
+              )
+
+            chat_session.history = history_formatted
+            full_prompt = (
+                f"Responde estrictamente en {st.session_state.lang} como"
+                f" experto en ciberseguridad y tecnología. Pregunta:"
+                f" {prompt_ia}"
             )
-          else:
-            prompt = (
-                "Analiza el siguiente texto cifrado o codificado. Detecta el tipo"
-                " de cifrado, devuélvelo descifrado y explica el paso a paso en"
-                f" español. Texto: {cifrado_usuario}"
+
+            response = chat_session.send_message(full_prompt)
+            bot_reply = response.text
+            st.markdown(bot_reply)
+            st.session_state.ai_chat_memory.append(
+                {"role": "assistant", "content": bot_reply}
             )
-          response = gemini_model.generate_content(prompt)
-          st.success(t["ia_result"])
-          st.markdown(response.text)
-        except Exception as e:
-          st.error(f"Error: {e}")
+          except Exception as e:
+            st.error(f"Error: {e}")
 
 # ----------------------------------------------------
 # SECCIÓN 3: MINI-WHATSAPP (CHAT)
@@ -534,6 +982,7 @@ elif menu == t["sec3"]:
           all_contacts_db[nuevo_contacto] = other_contacts
           save_contacts(all_contacts_db)
 
+        log_audit_event(st.session_state.username, f"Contacto añadido: {nuevo_contacto}")
         st.success(t["contact_added"])
         st.rerun()
       else:
@@ -551,20 +1000,10 @@ elif menu == t["sec3"]:
     if user_contacts:
       contact_to_delete = st.selectbox(t["select_to_delete"], user_contacts)
       if st.button(t["delete_contact_btn"]):
-        # Remover de los contactos del usuario actual
-        if contact_to_delete in user_contacts:
-          user_contacts.remove(contact_to_delete)
-          all_contacts_db[st.session_state.username] = user_contacts
-          save_contacts(all_contacts_db)
+        trash_db = load_trash()
+        if st.session_state.username not in trash_db:
+          trash_db[st.session_state.username] = []
 
-        # Remover del otro usuario también si lo tiene
-        other_contacts = all_contacts_db.get(contact_to_delete, [])
-        if st.session_state.username in other_contacts:
-          other_contacts.remove(st.session_state.username)
-          all_contacts_db[contact_to_delete] = other_contacts
-          save_contacts(all_contacts_db)
-
-        # Borrar salas de chat de la base de datos de chats
         all_chats = load_chats()
         rooms_to_remove = [
             room
@@ -572,16 +1011,32 @@ elif menu == t["sec3"]:
             if st.session_state.username in room
             and contact_to_delete in room
         ]
+
+        chat_backups = {}
         for r in rooms_to_remove:
+          chat_backups[str(r)] = all_chats[r]
           del all_chats[r]
         save_chats(all_chats)
 
+        if contact_to_delete in user_contacts:
+          user_contacts.remove(contact_to_delete)
+          all_contacts_db[st.session_state.username] = user_contacts
+          save_contacts(all_contacts_db)
+
+        trash_db[st.session_state.username].append({
+            "type": "contact_chat",
+            "contact": contact_to_delete,
+            "chats": chat_backups,
+            "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        })
+        save_trash(trash_db)
+
+        log_audit_event(st.session_state.username, f"Contacto a papelera: {contact_to_delete}")
         st.success(t["contact_deleted_success"])
         st.rerun()
 
   with col2:
     if selected_contact:
-      # Comprobamos si la cuenta del contacto fue borrada de la base de datos general de usuarios
       if selected_contact not in users_db:
         st.error(t["account_deleted_chat_msg"])
         if st.button(t["delete_contact_btn"]):
@@ -604,9 +1059,7 @@ elif menu == t["sec3"]:
           st.success(t["contact_deleted_success"])
           st.rerun()
       else:
-        st.subheader(
-            f"{'Txata honekin' if st.session_state.lang == 'Euskera' else 'Chat con'}: {selected_contact}"
-        )
+        st.subheader(f"Chat: {selected_contact}")
         chat_container = st.container(height=350)
 
         st.session_state.chat_history = load_chats()
@@ -614,32 +1067,17 @@ elif menu == t["sec3"]:
 
         if room_key not in st.session_state.chat_history:
           st.session_state.chat_history[room_key] = [
-              {
-                  "sender": selected_contact,
-                  "text": "Kaixo!"
-                  if st.session_state.lang == "Euskera"
-                  else "¡Hola!",
-              }
+              {"sender": selected_contact, "text": "¡Hola / Kaixo!"}
           ]
           save_chats(st.session_state.chat_history)
 
         with chat_container:
           for msg in st.session_state.chat_history[room_key]:
-            sender_label = (
-                "Zu"
-                if msg["sender"] == st.session_state.username
-                and st.session_state.lang == "Euskera"
-                else (
-                    "Tú"
-                    if msg["sender"] == st.session_state.username
-                    else msg["sender"]
-                )
-            )
             if msg["sender"] == st.session_state.username:
               st.markdown(
                   f"<div style='text-align: right; background-color:"
                   f" #DCF8C6; color: black; padding: 8px; border-radius: 10px;"
-                  f" margin: 5px;'><b>{sender_label}:</b> {msg['text']}</div>",
+                  f" margin: 5px;'><b>Tú / Zu:</b> {msg['text']}</div>",
                   unsafe_allow_html=True,
               )
             else:
@@ -663,7 +1101,7 @@ elif menu == t["sec3"]:
       st.info(t["select_contact_prompt"])
 
 # ----------------------------------------------------
-# SECCIÓN 4: CIFRADO DE IMÁGENES (CON CLAVE INTERNA)
+# SECCIÓN 4: CIFRADO DE IMÁGENES
 # ----------------------------------------------------
 elif menu == t["sec4"]:
   st.header("🖼️ " + t["img_title"])
@@ -693,6 +1131,7 @@ elif menu == t["sec4"]:
             json.dumps(paquete_img).encode()
         ).decode()
 
+        log_audit_event(st.session_state.username, "Imagen cifrada")
         st.success(t["img_cifrada_exito"])
         st.text_area(t["token_img_label"], token_img_completo)
 
@@ -713,101 +1152,117 @@ elif menu == t["sec4"]:
         image_stream = io.BytesIO(decrypted_bytes)
         restored_image = Image.open(image_stream)
 
+        log_audit_event(st.session_state.username, "Imagen descifrada")
         st.success(t["img_decrypted_success"])
         st.image(restored_image, caption=t["img_decrypted_caption"], width=300)
       except Exception as e:
         st.error(f"{t['img_error']}{e}")
 
 # ----------------------------------------------------
-# SECCIÓN 5: PANEL DE ADMINISTRACIÓN (EXCLUSIVO PARA JUAN)
+# SECCIÓN 5: PAPELERA DE RECICLAJE
+# ----------------------------------------------------
+elif menu == t["sec5"]:
+  st.header("🗑️ " + t["trash_title"])
+  st.write(t["trash_desc"])
+
+  trash_db = load_trash()
+  user_trash = trash_db.get(st.session_state.username, [])
+
+  if not user_trash:
+    st.info(t["no_trash"])
+  else:
+    for idx, item in enumerate(user_trash):
+      col_t1, col_t2, col_t3 = st.columns([3, 1, 1])
+      with col_t1:
+        st.markdown(f"**Contact / Kontaktua:** `{item['contact']}` — _({item['time']})_")
+      with col_t2:
+        if st.button(t["restore_btn"], key=f"res_{idx}"):
+          contacts_db = load_contacts()
+          u_contacts = contacts_db.get(st.session_state.username, [])
+          if item["contact"] not in u_contacts:
+            u_contacts.append(item["contact"])
+            contacts_db[st.session_state.username] = u_contacts
+            save_contacts(contacts_db)
+
+          all_chats = load_chats()
+          for r_str, c_data in item["chats"].items():
+            all_chats[eval(r_str)] = c_data
+          save_chats(all_chats)
+
+          user_trash.pop(idx)
+          trash_db[st.session_state.username] = user_trash
+          save_trash(trash_db)
+
+          log_audit_event(st.session_state.username, f"Restaurado: {item['contact']}")
+          st.success(t["item_restored"])
+          st.rerun()
+
+      with col_t3:
+        if st.button(t["permanent_delete_btn"], key=f"del_{idx}"):
+          user_trash.pop(idx)
+          trash_db[st.session_state.username] = user_trash
+          save_trash(trash_db)
+
+          log_audit_event(st.session_state.username, f"Purgado: {item['contact']}")
+          st.success(t["item_purged"])
+          st.rerun()
+
+# ----------------------------------------------------
+# SECCIÓN 6: AUDITORÍA Y SEGURIDAD
+# ----------------------------------------------------
+elif menu == t["sec6"]:
+  st.header("🛡️ " + t["audit_title"])
+  st.write(t["audit_desc"])
+
+  audit_data = load_audit()
+  user_audit = audit_data.get(st.session_state.username, [])
+
+  if not user_audit:
+    st.info(t["no_audit"])
+  else:
+    st.table(user_audit)
+
+# ----------------------------------------------------
+# SECCIÓN 7: PANEL DE ADMINISTRACIÓN (EXCLUSIVO PARA JUAN)
 # ----------------------------------------------------
 elif menu == t["admin_sec"] and st.session_state.username == "Juan":
-  st.header(
-      "🛡️ Administrazio Panela"
-      if st.session_state.lang == "Euskera"
-      else "🛡️ Panel de Administración"
-  )
-  st.write(
-      "Erregistratutako erabiltzaileen, saio aktiboen eta txaten"
-      " ikuskapenaren kontrol osoa."
-      if st.session_state.lang == "Euskera"
-      else "Control total de usuarios registrados, sesiones activas y"
-      " supervisión de chats."
-  )
+  st.header("🛡️ " + t["admin_title"])
+  st.write(t["admin_desc"])
 
   users_db = load_users()
   all_chats = load_chats()
 
-  admin_tab1, admin_tab2 = st.tabs(
-      [
-          "👥 Kontuak eta Konexioak"
-          if st.session_state.lang == "Euskera"
-          else "👥 Cuentas y Conexiones",
-          "💬 Txaten Ikuskapena"
-          if st.session_state.lang == "Euskera"
-          else "💬 Supervisión de Chats",
-      ]
-  )
+  admin_tab1, admin_tab2 = st.tabs([t["admin_tab1"], t["admin_tab2"]])
 
   with admin_tab1:
-    st.subheader(
-        "Erregistratutako Kontuak eta Egoera"
-        if st.session_state.lang == "Euskera"
-        else "Cuentas Registradas y Estado Actual"
-    )
+    st.subheader(t["accounts_registered"])
     for usr in list(users_db.keys()):
       col_u1, col_u2, col_u3 = st.columns([2, 2, 2])
       with col_u1:
         is_online = usr in st.session_state.active_sessions
-        if st.session_state.lang == "Euskera":
-          status_txt = "🟢 Konektatuta" if is_online else "🔴 Deskonektatuta"
-        else:
-          status_txt = "🟢 Conectado" if is_online else "🔴 Desconectado"
+        status_txt = "🟢 Online" if is_online else "🔴 Offline"
         st.markdown(f"**{usr}** — {status_txt}")
       with col_u2:
         st.text(f"Password: {users_db[usr]}")
       with col_u3:
         if usr != "Juan":
-          btn_text = (
-              f"kanporatu {usr}"
-              if st.session_state.lang == "Euskera"
-              else f"expulsar {usr}"
-          )
-          if st.button(btn_text, key=f"exp_{usr}"):
+          if st.button(f"{t['expulsar_btn']} {usr}", key=f"exp_{usr}"):
             if usr in users_db:
               del users_db[usr]
               save_users(users_db)
             if usr in st.session_state.active_sessions:
               st.session_state.active_sessions.remove(usr)
-            success_msg = (
-                f"{usr} erabiltzailea kanporatu da."
-                if st.session_state.lang == "Euskera"
-                else f"Usuario {usr} expulsado/eliminado."
-            )
-            st.success(success_msg)
+            st.success(f"{usr} {t['user_expulsado']}")
             st.rerun()
 
   with admin_tab2:
-    st.subheader(
-        "Erabiltzaileen Elkarrizketa Pribatuak"
-        if st.session_state.lang == "Euskera"
-        else "Conversaciones Privadas de los Usuarios"
-    )
+    st.subheader(t["chats_registered_admin"])
     if not all_chats:
-      st.info(
-          "Ez dago txat erregistrorik oraindik."
-          if st.session_state.lang == "Euskera"
-          else "No hay chats registrados aún."
-      )
+      st.info(t["no_chats_admin"])
     else:
       for room, msgs in all_chats.items():
         user_a, user_b = room
-        room_title = (
-            f"Elkarrizketa honen artean: **{user_a}** eta **{user_b}**"
-            if st.session_state.lang == "Euskera"
-            else f"Conversación entre: **{user_a}** y **{user_b}**"
-        )
-        st.markdown(f"### 📁 {room_title}")
+        st.markdown(f"### 📁 {t['chat_between']}: **{user_a}** & **{user_b}**")
         for m in msgs:
           st.text(f"[{m['sender']}]: {m['text']}")
         st.markdown("---")
@@ -821,9 +1276,11 @@ elif menu == t["config"]:
   with st.form("config_form"):
     st.subheader(t["lang_label"])
     nuevo_idioma = st.selectbox(
-        "Selecciona idioma / Hautatu hizkuntza",
-        ["Español", "Euskera"],
-        index=0 if st.session_state.lang == "Español" else 1,
+        "Select language / Hautatu hizkuntza / Seleccionar idioma / Choisir la langue",
+        ["Español", "Euskera", "English", "Français"],
+        index=["Español", "Euskera", "English", "Français"].index(
+            st.session_state.lang
+        ),
     )
 
     guardar_cambios = st.form_submit_button(t["save_config"])
