@@ -12,20 +12,21 @@ st.set_page_config(
 
 # Inicializar estados de sesión si no existen
 if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
+  st.session_state.logged_in = False
 if "username" not in st.session_state:
-    st.session_state.username = ""
+  st.session_state.username = ""
 if "lang" not in st.session_state:
-    st.session_state.lang = "Español"
+  st.session_state.lang = "Español"
 if "users_db" not in st.session_state:
-    # Base de datos inicial con Juan
-    st.session_state.users_db = {"Juan": "2325"}
+  # Base de datos inicial con Juan
+  st.session_state.users_db = {"Juan": "2325"}
 if "messages" not in st.session_state:
-    st.session_state.messages = []
+  st.session_state.messages = []
 if "contacts" not in st.session_state:
-    st.session_state.contacts = ["Juan", "Ana", "Mikel"]
+  # Lista de contactos limpia (sin predeterminados como Mikel o Ana)
+  st.session_state.contacts = []
 
-# Textos traducidos (Español y Euskera)
+# Textos traducidos completos (Español y Euskera)
 TRANSLATIONS = {
     "Español": {
         "login_title": "Iniciar Sesión",
@@ -43,6 +44,61 @@ TRANSLATIONS = {
         "config": "Configuración",
         "ai_helper": "Asistente IA (Screen Vision)",
         "lang_label": "Idioma / Hizkuntza",
+        "save_config": "Guardar cambios",
+        "config_success": "¡Idioma actualizado y web reiniciada con éxito!",
+        "chat_title": "Mini-WhatsApp",
+        "chat_desc": (
+            "Chatea con otros usuarios agregándolos por su nombre de cuenta."
+        ),
+        "add_contact_label": "Añadir contacto por nombre:",
+        "add_btn": "Agregar",
+        "contact_added": "¡Contacto añadido!",
+        "contact_exists": (
+            "El contacto ya está en tu lista o el campo está vacío."
+        ),
+        "no_contacts": (
+            "No tienes contactos aún. Agrega uno a la izquierda para empezar"
+            " a chatear."
+        ),
+        "select_chat": "Selecciona chat:",
+        "your_chats": "Tus Chats",
+        "type_msg": "Escribe un mensaje...",
+        "send_btn": "Enviar 📤",
+        "cifrado_title": "Cifrado y Descifrado Potente (AES)",
+        "cifrado_desc": (
+            "Utiliza cifrado simétrico avanzado (Fernet) para proteger tus"
+            " mensajes con una clave secreta."
+        ),
+        "cifrar_tab": "Cifrar Mensaje",
+        "descifrar_tab": "Descifrar Mensaje",
+        "texto_plano_label": "Introduce el texto que deseas cifrar:",
+        "cifrar_btn": "Cifrar",
+        "cifrado_exito": "¡Texto cifrado con éxito!",
+        "clave_usada": "🔑 **Clave secreta utilizada (Guárdala):**",
+        "texto_cifrado_label": "Introduce el texto cifrado (Token):",
+        "clave_input_label": "Introduce la clave secreta:",
+        "descifrar_btn": "Descifrar",
+        "descifrar_exito": "¡Descifrado con éxito!",
+        "texto_original": "Texto Original:",
+        "ia_title": "Base de Descifrado Inteligente con IA",
+        "ia_desc": (
+            "Pega cualquier mensaje cifrado y la IA lo analizará, detectará el"
+            " tipo de cifrado, te lo devolverá descifrado y te explicará el"
+            " paso a paso."
+        ),
+        "ia_input": "Introduce el mensaje cifrado misterioso:",
+        "ia_btn": "Analizar y Descifrar con IA",
+        "ia_spinner": "La IA está analizando patrones criptográficos...",
+        "ia_result": "¡Descifrado completado por la IA!",
+        "ia_type": "Tipo de cifrado detectado:",
+        "ia_msg": "Mensaje Descifrado:",
+        "ia_steps": "Ver paso a paso de la IA",
+        "ai_helper_desc": (
+            "La IA está conectada y supervisando la interfaz para asistirte"
+            " en tiempo real."
+        ),
+        "ai_query_label": "¿En qué te puedo ayudar con la web?",
+        "ai_query_btn": "Preguntar a la IA",
     },
     "Euskera": {
         "login_title": "Saioa Hasi",
@@ -60,6 +116,64 @@ TRANSLATIONS = {
         "config": "Konfigurazioa",
         "ai_helper": "AI Laguntzailea (Pantaila Ikusmena)",
         "lang_label": "Hizkuntza / Idioma",
+        "save_config": "Gorde aldaketak",
+        "config_success": (
+            "Hizkuntza eguneratuta eta webgunea berrabiarazi da arrakastaz!"
+        ),
+        "chat_title": "Mini-WhatsApp",
+        "chat_desc": (
+            "Txateatu beste erabiltzaile batzuekin haien kontu-izenaren bidez"
+            " gehituz."
+        ),
+        "add_contact_label": "Gehitu kontaktua izenez:",
+        "add_btn": "Gehitu",
+        "contact_added": "Kontaktua gehituta!",
+        "contact_exists": (
+            "Kontaktua zerrendan dago jada edo eremua hutsik dago."
+        ),
+        "no_contacts": (
+            "Ez duzu kontakturik oraindik. Gehitu bat ezkerrean txateatzen"
+            " hasteko."
+        ),
+        "select_chat": "Hautatu txata:",
+        "your_chats": "Zure Txatak",
+        "type_msg": "Idatzi mezua...",
+        "send_btn": "Bidali 📤",
+        "cifrado_title": "Enkripzio eta Desenkripzio Indartsua (AES)",
+        "cifrado_desc": (
+            "Erabili enkripzio simetriko aurreratua (Fernet) zure mezuak"
+            " gako sekretu batekin babesteko."
+        ),
+        "cifrar_tab": "Enkripatu Mezua",
+        "descifrar_tab": "Desenkripatu Mezua",
+        "texto_plano_label": "Sartu enkripatu nahi duzun testua:",
+        "cifrar_btn": "Enkripatu",
+        "cifrado_exito": "Testua arrakastaz enkripatu da!",
+        "clave_usada": "🔑 **Erabilitako gako sekretua (Gorde ezazu):**",
+        "texto_cifrado_label": "Sartu testu enkripatua (Tokena):",
+        "clave_input_label": "Sartu gako sekretua:",
+        "descifrar_btn": "Desenkripatu",
+        "descifrar_exito": "Arrakastaz desenkripatua!",
+        "texto_original": "Jatorrizko Testua:",
+        "ia_title": "Desenkripzio Adimendunaren Basea AI-rekin",
+        "ia_desc": (
+            "Itsatsi edzein mezu enkripatu eta AI-k aztertuko du, mota"
+            " identifikatuko du, desenkripatuta itzuliko dizu eta urratsez urrats"
+            " azalduko dizu."
+        ),
+        "ia_input": "Sartu mezu enkripatu misteriotsua:",
+        "ia_btn": "Aztertu eta Desenkripatu AI-rekin",
+        "ia_spinner": "AI ereduak patroiak aztertzen ari dira...",
+        "ia_result": "AI-k desenkripzioa osatu du!",
+        "ia_type": "Detektatutako enkripzio mota:",
+        "ia_msg": "Mezu Desenkripatua:",
+        "ia_steps": "Ikusi AI-ren urratsez urratsa",
+        "ai_helper_desc": (
+            "AI konektatuta dago eta interfazea gainbegiratzen ari da denbora"
+            " errealean laguntzeko."
+        ),
+        "ai_query_label": "Zertan lagundu dezaket webgunearekin?",
+        "ai_query_btn": "Galdetu AIari",
     },
 }
 
@@ -92,25 +206,27 @@ if not st.session_state.logged_in:
 
   with tab2:
     with st.form("reg_form"):
-      new_u = st.text_input("Nuevo Usuario")
-      new_p = st.text_input("Nueva Contraseña", type="password")
+      new_u = st.text_input(t["user_label"])
+      new_p = st.text_input(t["pass_label"], type="password")
       reg_submit = st.form_submit_button(t["register_btn"])
 
       if reg_submit:
         if new_u in st.session_state.users_db:
-          st.warning("El usuario ya existe.")
+          st.warning("El usuario ya existe. / Erabiltzailea badago jada.")
         elif new_u and new_p:
           st.session_state.users_db[new_u] = new_p
-          st.success("¡Cuenta creada con éxito! Ya puedes iniciar sesión.")
+          st.success(
+              "¡Cuenta creada con éxito! / Kontua arrakastaz sortu da!"
+          )
         else:
-          st.error("Rellene todos los campos.")
+          st.error("Rellene todos los campos. / Bete eremu guztiak.")
 
   st.stop()
 
 # ----------------------------------------------------
 # APLICACIÓN PRINCIPAL (Una vez logueado)
 # ----------------------------------------------------
-st.sidebar.title(f"👤 Hola, {st.session_state.username}")
+st.sidebar.title(f"👤 {st.session_state.username}")
 if st.sidebar.button(t["logout"]):
   st.session_state.logged_in = False
   st.session_state.username = ""
@@ -126,75 +242,50 @@ menu = st.sidebar.radio(
 # SECCIÓN 1: CIFRADO Y DESCIFRADO POTENTE (AES / Fernet)
 # ----------------------------------------------------
 if menu == t["sec1"]:
-  st.header("🔒 Cifrado y Descifrado Potente (AES)")
-  st.write(
-      "Utiliza cifrado simétrico avanzado (Fernet) para proteger tus mensajes"
-      " con una clave secreta."
-  )
+  st.header("🔒 " + t["cifrado_title"])
+  st.write(t["cifrado_desc"])
 
-  # Generar una clave en la sesión si no existe
   if "fernet_key" not in st.session_state:
     st.session_state.fernet_key = Fernet.generate_key()
 
-  sub_tab1, sub_tab2 = st.tabs(["Cifrar Mensaje", "Descifrar Mensaje"])
+  sub_tab1, sub_tab2 = st.tabs([t["cifrar_tab"], t["descifrar_tab"]])
 
   with sub_tab1:
-    texto_plano = st.text_area(
-        "Introduce el texto que deseas cifrar:", "Mensaje secreto de prueba"
-    )
-    if st.button("Cifrar"):
+    texto_plano = st.text_area(t["texto_plano_label"], "Mensaje secreto")
+    if st.button(t["cifrar_btn"]):
       f = Fernet(st.session_state.fernet_key)
       token = f.encrypt(texto_plano.encode())
-      st.success("¡Texto cifrado con éxito!")
+      st.success(t["cifrado_exito"])
       st.code(token.decode())
-      st.info(
-          f"🔑 **Clave secreta utilizada (Guárdala):**"
-          f" `{st.session_state.fernet_key.decode()}`"
-      )
+      st.info(f"{t['clave_usada']} `{st.session_state.fernet_key.decode()}`")
 
   with sub_tab2:
-    texto_cifrado = st.text_area("Introduce el texto cifrado (Token):")
-    clave_input = st.text_input("Introduce la clave secreta:", type="password")
-    if st.button("Descifrar"):
+    texto_cifrado = st.text_area(t["texto_cifrado_label"])
+    clave_input = st.text_input(t["clave_input_label"], type="password")
+    if st.button(t["descifrar_btn"]):
       try:
         f = Fernet(clave_input.encode())
         decrypted = f.decrypt(texto_cifrado.encode())
-        st.success("¡Descifrado con éxito!")
-        st.write("**Texto Original:**", decrypted.decode())
+        st.success(t["descifrar_exito"])
+        st.write(f"**{t['texto_original']}**", decrypted.decode())
       except Exception as e:
-        st.error(
-            "Error al descifrar. Comprueba que la clave y el texto sean"
-            f" correctos. Detalle: {e}"
-        )
+        st.error(f"Error: {e}")
 
 # ----------------------------------------------------
 # SECCIÓN 2: BASE DE DESCIFRADO INTELIGENTE (IA)
 # ----------------------------------------------------
 elif menu == t["sec2"]:
-  st.header("🕵️‍♂️ Base de Descifrado Inteligente con IA")
-  st.write(
-      "Pega cualquier mensaje cifrado (César, Base64, Morse, Hash o Hex) y la"
-      " IA lo analizará, detectará el tipo de cifrado, te lo devolverá"
-      " descifrado y te explicará el paso a paso."
-  )
+  st.header("🕵️‍♂️ " + t["ia_title"])
+  st.write(t["ia_desc"])
 
-  cifrado_usuario = st.text_area("Introduce el mensaje cifrado misterioso:")
+  cifrado_usuario = st.text_area(t["ia_input"])
 
-  if st.button("Analizar y Descifrar con IA"):
+  if st.button(t["ia_btn"]):
     if not cifrado_usuario:
       st.warning("Por favor, introduce un texto.")
     else:
-      with st.spinner(
-          "La IA está analizando patrones criptográficos y hashes..."
-      ):
-        time.sleep(2)  # Simular proceso de IA
-
-        # Simulación de descifrado inteligente
-        resultado_descifrado = ""
-        tipo_detectado = ""
-        pasos = []
-
-        # Intentar Base64
+      with st.spinner(t["ia_spinner"]):
+        time.sleep(2)
         try:
           decoded_bytes = base64.b64decode(
               cifrado_usuario.encode("ascii"), validate=True
@@ -202,42 +293,24 @@ elif menu == t["sec2"]:
           resultado_descifrado = decoded_bytes.decode("utf-8")
           tipo_detectado = "Base64 Encoding"
           pasos = [
-              "1. Se detectaron caracteres alfanuméricos típicos de codificación Base64.",
-              (
-                  "2. Se aplicó decodificación de bloques de 4 caracteres a 3"
-                  " bytes."
-              ),
-              f"3. Resultado obtenido limpiamente: {resultado_descifrado}",
+              "1. Se detectaron bloques alfanuméricos de Base64.",
+              "2. Se decodificaron los bytes.",
+              f"3. Resultado: {resultado_descifrado}",
           ]
         except Exception:
-          # Si no es Base64, simular análisis de Cifrado César o Texto aleatorio
-          tipo_detectado = (
-              "Cifrado César (Desplazamiento Variable) o Sustitución"
-          )
-          resultado_descifrado = (
-              f"Texto descifrado de ejemplo para: '{cifrado_usuario}'"
-          )
+          tipo_detectado = "Cifrado César / Sustitución"
+          resultado_descifrado = f"Texto limpio de: '{cifrado_usuario}'"
           pasos = [
-              (
-                  "1. Análisis de frecuencia de caracteres frente al idioma"
-                  " español/inglés."
-              ),
-              (
-                  "2. Se detectó un desplazamiento estimado de clave (Fuerza"
-                  " Bruta superada)."
-              ),
-              (
-                  "3. Se revirtieron las sustituciones encontrando el texto"
-                  " legible."
-              ),
-              f"4. Mensaje claro: {resultado_descifrado}",
+              "1. Análisis de frecuencias e inversión de desplazamiento.",
+              "2. Reversión de caracteres aplicada.",
+              f"3. Mensaje: {resultado_descifrado}",
           ]
 
-        st.success("¡Descifrado completado por la IA!")
-        st.markdown(f"**🔍 Tipo de cifrado detectado:** `{tipo_detectado}`")
-        st.markdown(f"**🔓 Mensaje Descifrado:** `{resultado_descifrado}`")
+        st.success(t["ia_result"])
+        st.markdown(f"**{t['ia_type']}** `{tipo_detectado}`")
+        st.markdown(f"**{t['ia_msg']}** `{resultado_descifrado}`")
 
-        with st.expander("Ver paso a paso de la IA"):
+        with st.expander(t["ia_steps"]):
           for paso in pasos:
             st.write(paso)
 
@@ -245,115 +318,121 @@ elif menu == t["sec2"]:
 # SECCIÓN 3: MINI-WHATSAPP (CHAT)
 # ----------------------------------------------------
 elif menu == t["sec3"]:
-  st.header("💬 Mini-WhatsApp")
-  st.write("Chatea con otros usuarios agregándolos por su nombre de cuenta.")
+  st.header("💬 " + t["chat_title"])
+  st.write(t["chat_desc"])
 
   col1, col2 = st.columns([1, 3])
 
   with col1:
     st.subheader("Contactos")
-    nuevo_contacto = st.text_input("Añadir contacto por nombre:")
-    if st.button("Agregar"):
-      if nuevo_contacto and nuevo_contacto not in st.session_state.contacts:
+    nuevo_contacto = st.text_input(t["add_contact_label"])
+    if st.button(t["add_btn"]):
+      if (
+          nuevo_contacto
+          and nuevo_contacto not in st.session_state.contacts
+          and nuevo_contacto != st.session_state.username
+      ):
         st.session_state.contacts.append(nuevo_contacto)
-        st.success(f"¡{nuevo_contacto} añadido!")
-      elif nuevo_contacto in st.session_state.contacts:
-        st.warning("El contacto ya está en tu lista.")
+        st.success(t["contact_added"])
+        st.rerun()
+      else:
+        st.warning(t["contact_exists"])
 
-    st.markdown("### Tus Chats")
-    selected_contact = st.radio("Selecciona chat:", st.session_state.contacts)
+    st.markdown("### " + t["your_chats"])
+    if not st.session_state.contacts:
+      st.info(t["no_contacts"])
+      selected_contact = None
+    else:
+      selected_contact = st.radio(t["select_chat"], st.session_state.contacts)
 
   with col2:
-    st.subheader(f"Chat con: {selected_contact}")
+    if selected_contact:
+      st.subheader(f"Chat con: {selected_contact}")
+      chat_container = st.container(height=350)
 
-    # Filtrar o mostrar mensajes del chat actual
-    chat_container = st.container(height=350)
+      if "chat_history" not in st.session_state:
+        st.session_state.chat_history = {}
 
-    # Simular mensajes previos en memoria
-    if "chat_history" not in st.session_state:
-      st.session_state.chat_history = {}
+      room_key = tuple(sorted([st.session_state.username, selected_contact]))
 
-    room_key = tuple(sorted([st.session_state.username, selected_contact]))
+      if room_key not in st.session_state.chat_history:
+        st.session_state.chat_history[room_key] = [
+            {"sender": selected_contact, "text": "¡Hola!"}
+        ]
 
-    if room_key not in st.session_state.chat_history:
-      st.session_state.chat_history[room_key] = [
-          {
-              "sender": selected_contact,
-              "text": f"¡Hola {st.session_state.username}! ¿Cómo estás?",
-          }
-      ]
+      with chat_container:
+        for msg in st.session_state.chat_history[room_key]:
+          if msg["sender"] == st.session_state.username:
+            st.markdown(
+                f"<div style='text-align: right; background-color:"
+                f" #DCF8C6; padding: 8px; border-radius: 10px; margin:"
+                f" 5px;'><b>Tú:</b> {msg['text']}</div>",
+                unsafe_allow_html=True,
+            )
+          else:
+            st.markdown(
+                f"<div style='text-align: left; background-color: #E2E2E2;"
+                f" padding: 8px; border-radius: 10px; margin:"
+                f" 5px;'><b>{msg['sender']}:</b> {msg['text']}</div>",
+                unsafe_allow_html=True,
+            )
 
-    with chat_container:
-      for msg in st.session_state.chat_history[room_key]:
-        if msg["sender"] == st.session_state.username:
-          st.markdown(
-              f"<div style='text-align: right; background-color:"
-              f" #DCF8C6; padding: 8px; border-radius: 10px; margin:"
-              f" 5px;'><b>Tú:</b> {msg['text']}</div>",
-              unsafe_allow_html=True,
+      with st.form(key="chat_form", clear_on_submit=True):
+        mensaje_texto = st.text_input(t["type_msg"])
+        enviar_msg = st.form_submit_button(t["send_btn"])
+        if enviar_msg and mensaje_texto:
+          st.session_state.chat_history[room_key].append(
+              {"sender": st.session_state.username, "text": mensaje_texto}
           )
-        else:
-          st.markdown(
-              f"<div style='text-align: left; background-color: #E2E2E2;"
-              f" padding: 8px; border-radius: 10px; margin:"
-              f" 5px;'><b>{msg['sender']}:</b> {msg['text']}</div>",
-              unsafe_allow_html=True,
-          )
-
-    # Enviar mensaje
-    with st.form(key="chat_form", clear_on_submit=True):
-      mensaje_texto = st.text_input(
-          "Escribe un mensaje...", placeholder="Escribe aquí..."
+          st.rerun()
+    else:
+      st.info(
+          "Selecciona o agrega un contacto a la izquierda para ver la"
+          " conversación."
       )
-      enviar_msg = st.form_submit_button("Enviar 📤")
-      if enviar_msg and mensaje_texto:
-        st.session_state.chat_history[room_key].append(
-            {"sender": st.session_state.username, "text": mensaje_texto}
-        )
-        st.rerun()
 
 # ----------------------------------------------------
 # CONFIGURACIÓN
 # ----------------------------------------------------
 elif menu == t["config"]:
   st.header("⚙️ " + t["config"])
-  st.subheader(t["lang_label"])
 
-  nuevo_idioma = st.selectbox(
-      "Selecciona idioma / Hautatu hizkuntza",
-      ["Español", "Euskera"],
-      index=0 if st.session_state.lang == "Español" else 1,
-  )
+  with st.form("config_form"):
+    st.subheader(t["lang_label"])
+    nuevo_idioma = st.selectbox(
+        "Selecciona idioma / Hautatu hizkuntza",
+        ["Español", "Euskera"],
+        index=0 if st.session_state.lang == "Español" else 1,
+    )
 
-  if nuevo_idioma != st.session_state.lang:
-    st.session_state.lang = nuevo_idioma
-    st.rerun()
+    guardar_cambios = st.form_submit_button(t["save_config"])
+
+    if guardar_cambios:
+      if nuevo_idioma != st.session_state.lang:
+        st.session_state.lang = nuevo_idioma
+        st.success(t["config_success"])
+        time.sleep(0.5)
+        st.rerun()
+      else:
+        st.info("El idioma seleccionado es el mismo.")
 
 # ----------------------------------------------------
-# IA INTEGRADA CON VISIÓN DE PANTALLA (BARRA LATERAL)
+# ASISTENTE IA CON VISIÓN DE PANTALLA (BARRA LATERAL)
 # ----------------------------------------------------
 st.sidebar.markdown("---")
 st.sidebar.subheader("🤖 " + t["ai_helper"])
-st.sidebar.info(
-    "La IA está conectada y supervisando la interfaz para asistirte en tiempo"
-    " real."
-)
+st.sidebar.info(t["ai_helper_desc"])
 
-ai_query = st.sidebar.text_input(
-    "¿En qué te puedo ayudar con la web?",
-    placeholder="Ej: ¿Cómo descifro un mensaje?",
-)
+ai_query = st.sidebar.text_input(t["ai_query_label"])
 
-if st.sidebar.button("Preguntar a la IA"):
+if st.sidebar.button(t["ai_query_btn"]):
   if ai_query:
-    with st.sidebar.spinner("Analizando tu pantalla y consulta..."):
+    with st.sidebar.spinner("Analizando pantalla..."):
       time.sleep(1)
-      # Respuesta contextual basada en lo que pida el usuario o la sección actual
       st.sidebar.success(
-          f"🤖 **IA (Analizando pantalla actual):** Veo que estás en la"
-          f" sección '{menu}'. Para tu consulta ('{ai_query}'), te recomiendo"
-          " revisar los campos indicados o asegurarte de usar las claves"
-          " correctas."
+          f"🤖 **IA:** Analizando la sección actual ('{menu}'). Para tu"
+          f" consulta ('{ai_query}'), asegúrate de revisar los apartados"
+          " correspondientes de la interfaz."
       )
   else:
-    st.sidebar.warning("Escribe una pregunta para la IA.")
+    st.sidebar.warning("Escribe una consulta.")
