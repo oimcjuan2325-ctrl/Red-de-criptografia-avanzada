@@ -2,8 +2,18 @@ import base64
 import json
 import os
 import time
+import google.generativeai as genai
 import streamlit as st
 from cryptography.fernet import Fernet
+
+# ====================================================
+# CONFIGURACIÓN SEGURA DE LA API KEY (DESDE SECRETS DE STREAMLIT)
+# ====================================================
+try:
+  genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+  gemini_model = genai.GenerativeModel("gemini-1.5-flash")
+except Exception:
+  gemini_model = None
 
 # Configuración de la página
 st.set_page_config(
@@ -97,7 +107,7 @@ TRANSLATIONS = {
         "sec2": "2. Base de Descifrado Inteligente (IA)",
         "sec3": "3. Mini-WhatsApp (Chat)",
         "config": "Configuración",
-        "ai_helper": "Asistente IA (Screen Vision)",
+        "ai_helper": "Asistente IA",
         "lang_label": "Idioma / Hizkuntza",
         "save_config": "Guardar cambios",
         "config_success": "¡Idioma actualizado y web reiniciada con éxito!",
@@ -137,25 +147,20 @@ TRANSLATIONS = {
         "descifrar_btn": "Descifrar",
         "descifrar_exito": "¡Descifrado con éxito!",
         "texto_original": "Texto Original:",
-        "ia_title": "Base de Descifrado Inteligente con IA",
+        "ia_title": "Base de Descifrado Inteligente con IA (Gemini)",
         "ia_desc": (
-            "Pega cualquier mensaje cifrado y la IA lo analizará, detectará el"
-            " tipo de cifrado, te lo devolverá descifrado y te explicará el"
-            " paso a paso."
+            "Pega cualquier mensaje cifrado y Gemini lo analizará,"
+            " descifrará y explicará el paso a paso."
         ),
         "ia_input": "Introduce el mensaje cifrado misterioso:",
-        "ia_btn": "Analizar y Descifrar con IA",
-        "ia_spinner": "La IA está analizando patrones criptográficos...",
-        "ia_result": "¡Descifrado completado por la IA!",
-        "ia_type": "Tipo de cifrado detectado:",
-        "ia_msg": "Mensaje Descifrado:",
-        "ia_steps": "Ver paso a paso de la IA",
+        "ia_btn": "Analizar y Descifrar con Gemini",
+        "ia_spinner": "Gemini está analizando el cifrado...",
+        "ia_result": "¡Análisis completado por Gemini!",
         "ai_helper_desc": (
-            "La IA está conectada y supervisando la interfaz para asistirte"
-            " en tiempo real."
+            "Gemini está conectado para ayudarte en esta sección."
         ),
-        "ai_query_label": "¿En qué te puedo ayudar con la web?",
-        "ai_query_btn": "Preguntar a la IA",
+        "ai_query_label": "¿En qué te puedo ayudar?",
+        "ai_query_btn": "Preguntar a Gemini",
     },
     "Euskera": {
         "login_title": "Saioa Hasi",
@@ -171,7 +176,7 @@ TRANSLATIONS = {
         "sec2": "2. Desenkripzio Adimendunaren Basea (AI)",
         "sec3": "3. Mini-WhatsApp (Txata)",
         "config": "Konfigurazioa",
-        "ai_helper": "AI Laguntzailea (Pantaila Ikusmena)",
+        "ai_helper": "AI Laguntzailea",
         "lang_label": "Hizkuntza / Idioma",
         "save_config": "Gorde aldaketak",
         "config_success": (
@@ -213,25 +218,20 @@ TRANSLATIONS = {
         "descifrar_btn": "Desenkripatu",
         "descifrar_exito": "Arrakastaz desenkripatua!",
         "texto_original": "Jatorrizko Testua:",
-        "ia_title": "Desenkripzio Adimendunaren Basea AI-rekin",
+        "ia_title": "Desenkripzio Adimendunaren Basea AI-rekin (Gemini)",
         "ia_desc": (
-            "Itsatsi edzein mezu enkripatu eta AI-k aztertuko du, mota"
-            " identifikatuko du, desenkripatuta itzuliko dizu eta urratsez urrats"
-            " azalduko dizu."
+            "Itsatsi edzein mezu eta Gemini-k aztertuko du, desenkripatu eta"
+            " urratsez urrats azalduko du."
         ),
         "ia_input": "Sartu mezu enkripatu misteriotsua:",
-        "ia_btn": "Aztertu eta Desenkripatu AI-rekin",
-        "ia_spinner": "AI ereduak patroiak aztertzen ari dira...",
-        "ia_result": "AI-k desenkripzioa osatu du!",
-        "ia_type": "Detektatutako enkripzio mota:",
-        "ia_msg": "Mezu Desenkripatua:",
-        "ia_steps": "Ikusi AI-ren urratsez urratsa",
+        "ia_btn": "Aztertu eta Desenkripatu Gemini-rekin",
+        "ia_spinner": "Gemini enkripzioa aztertzen ari da...",
+        "ia_result": "Gemini-k analisia osatu du!",
         "ai_helper_desc": (
-            "AI konektatuta dago eta interfazea gainbegiratzen ari da denbora"
-            " errealean laguntzeko."
+            "Gemini konektatuta dago atal honetan laguntzeko."
         ),
-        "ai_query_label": "Zertan lagundu dezaket webgunearekin?",
-        "ai_query_btn": "Galdetu AIari",
+        "ai_query_label": "Zertan lagundu dezaket?",
+        "ai_query_btn": "Galdetu Gemini-ri",
     },
 }
 
@@ -276,17 +276,14 @@ if not st.session_state.logged_in:
         elif new_u and new_p:
           st.session_state.users_db[new_u] = new_p
           save_users(st.session_state.users_db)
-          st.success(
-              "¡Cuenta creada con éxito y guardada! / Kontua arrakastaz sortu"
-              " eta gorde da!"
-          )
+          st.success("¡Cuenta creada con éxito! / Kontua arrakastaz sortu da!")
         else:
           st.error("Rellene todos los campos. / Bete eremu guztiak.")
 
   st.stop()
 
 # ----------------------------------------------------
-# APLICACIÓN PRINCIPAL (Una vez logueado)
+# APLICACIÓN PRINCIPAL
 # ----------------------------------------------------
 st.sidebar.title(f"👤 {st.session_state.username}")
 if st.sidebar.button(t["logout"]):
@@ -301,7 +298,7 @@ menu = st.sidebar.radio(
 )
 
 # ----------------------------------------------------
-# SECCIÓN 1: CIFRADO Y DESCIFRADO POTENTE (AES / Fernet)
+# SECCIÓN 1: CIFRADO Y DESCIFRADO POTENTE (AES)
 # ----------------------------------------------------
 if menu == t["sec1"]:
   st.header("🔒 " + t["cifrado_title"])
@@ -334,7 +331,7 @@ if menu == t["sec1"]:
         st.error(f"Error: {e}")
 
 # ----------------------------------------------------
-# SECCIÓN 2: BASE DE DESCIFRADO INTELIGENTE (IA)
+# SECCIÓN 2: BASE DE DESCIFRADO INTELIGENTE CON GEMINI
 # ----------------------------------------------------
 elif menu == t["sec2"]:
   st.header("🕵️‍♂️ " + t["ia_title"])
@@ -345,36 +342,23 @@ elif menu == t["sec2"]:
   if st.button(t["ia_btn"]):
     if not cifrado_usuario:
       st.warning("Por favor, introduce un texto.")
+    elif not gemini_model:
+      st.error(
+          "La API Key no está configurada en los Secrets de Streamlit Cloud."
+      )
     else:
       with st.spinner(t["ia_spinner"]):
-        time.sleep(2)
         try:
-          decoded_bytes = base64.b64decode(
-              cifrado_usuario.encode("ascii"), validate=True
+          prompt = (
+              "Analiza el siguiente texto cifrado o codificado. Detecta el tipo"
+              " de cifrado, devuélvelo descifrado y explica el paso a paso."
+              f" Texto: {cifrado_usuario}"
           )
-          resultado_descifrado = decoded_bytes.decode("utf-8")
-          tipo_detectado = "Base64 Encoding"
-          pasos = [
-              "1. Se detectaron bloques alfanuméricos de Base64.",
-              "2. Se decodificaron los bytes.",
-              f"3. Resultado: {resultado_descifrado}",
-          ]
-        except Exception:
-          tipo_detectado = "Cifrado César / Sustitución"
-          resultado_descifrado = f"Texto limpio de: '{cifrado_usuario}'"
-          pasos = [
-              "1. Análisis de frecuencias e inversión de desplazamiento.",
-              "2. Reversión de caracteres aplicada.",
-              f"3. Mensaje: {resultado_descifrado}",
-          ]
-
-        st.success(t["ia_result"])
-        st.markdown(f"**{t['ia_type']}** `{tipo_detectado}`")
-        st.markdown(f"**{t['ia_msg']}** `{resultado_descifrado}`")
-
-        with st.expander(t["ia_steps"]):
-          for paso in pasos:
-            st.write(paso)
+          response = gemini_model.generate_content(prompt)
+          st.success(t["ia_result"])
+          st.markdown(response.text)
+        except Exception as e:
+          st.error(f"Error al conectar con Gemini: {e}")
 
 # ----------------------------------------------------
 # SECCIÓN 3: MINI-WHATSAPP (CHAT)
@@ -385,7 +369,6 @@ elif menu == t["sec3"]:
 
   col1, col2 = st.columns([1, 3])
 
-  # Cargar contactos globales desde archivo persistente
   all_contacts_db = load_contacts()
   user_contacts = all_contacts_db.get(st.session_state.username, [])
 
@@ -395,7 +378,6 @@ elif menu == t["sec3"]:
     if st.button(t["add_btn"]):
       st.session_state.users_db = load_users()
 
-      # Validar si el usuario existe, no está ya añadido y no es uno mismo
       if (
           nuevo_contacto in st.session_state.users_db
           and nuevo_contacto not in user_contacts
@@ -405,7 +387,6 @@ elif menu == t["sec3"]:
         all_contacts_db[st.session_state.username] = user_contacts
         save_contacts(all_contacts_db)
 
-        # Si agregas a la otra persona, de forma recíproca también te agregamos a ti en sus contactos
         other_contacts = all_contacts_db.get(nuevo_contacto, [])
         if st.session_state.username not in other_contacts:
           other_contacts.append(st.session_state.username)
@@ -465,10 +446,7 @@ elif menu == t["sec3"]:
           save_chats(st.session_state.chat_history)
           st.rerun()
     else:
-      st.info(
-          "Selecciona o agrega un contacto a la izquierda para ver la"
-          " conversación."
-      )
+      st.info("Selecciona o agrega un contacto para ver la conversación.")
 
 # ----------------------------------------------------
 # CONFIGURACIÓN
@@ -496,28 +474,33 @@ elif menu == t["config"]:
         st.info("El idioma seleccionado es el mismo.")
 
 # ----------------------------------------------------
-# ASISTENTE IA CON VISIÓN DE PANTALLA (BARRA LATERAL)
+# ASISTENTE IA DE GEMINI (BARRA LATERAL)
 # ----------------------------------------------------
 st.sidebar.markdown("---")
 st.sidebar.subheader("🤖 " + t["ai_helper"])
-st.sidebar.info(t["ai_helper_desc"])
-
 ai_query = st.sidebar.text_input(t["ai_query_label"])
 
 if st.sidebar.button(t["ai_query_btn"]):
   if ai_query:
-    with st.sidebar.spinner("Analizando pantalla..."):
-      time.sleep(1)
-      st.sidebar.success(
-          f"🤖 **IA:** Analizando la sección actual ('{menu}'). Para tu"
-          f" consulta ('{ai_query}'), asegúrate de revisar los apartados"
-          " correspondientes de la interfaz."
-      )
+    if not gemini_model:
+      st.sidebar.error("Falta configurar la API Key en los Secrets.")
+    else:
+      with st.sidebar.spinner("Gemini pensando..."):
+        try:
+          prompt_helper = (
+              f"Estás en una web de ciberseguridad en la sección '{menu}'."
+              f" El usuario pregunta: {ai_query}. Responde de forma útil y"
+              " breve."
+          )
+          response = gemini_model.generate_content(prompt_helper)
+          st.sidebar.success(response.text)
+        except Exception as e:
+          st.sidebar.error(f"Error: {e}")
   else:
     st.sidebar.warning("Escribe una consulta.")
 
 # ----------------------------------------------------
-# ENLACE CALCULADORA CON IA (PIE DE BARRA LATERAL)
+# ENLACE CALCULADORA CON IA
 # ----------------------------------------------------
 st.sidebar.markdown("---")
 st.sidebar.markdown(
