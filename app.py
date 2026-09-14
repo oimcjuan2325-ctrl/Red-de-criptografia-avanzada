@@ -137,17 +137,19 @@ TRANSLATIONS = {
         "cifrado_title": "Cifrado y Descifrado Potente (AES)",
         "cifrado_desc": (
             "Utiliza cifrado simétrico avanzado (Fernet) para proteger tus"
-            " mensajes con una clave secreta."
+            " mensajes integrando la clave en el propio token."
         ),
         "cifrar_tab": "Cifrar Mensaje",
         "descifrar_tab": "Descifrar Mensaje",
         "texto_plano_label": "Introduce el texto que deseas cifrar:",
-        "cifrar_btn": "Cifrar",
-        "cifrado_exito": "¡Texto cifrado con éxito!",
-        "clave_usada": "🔑 **Clave secreta utilizada (Guárdala):**",
-        "texto_cifrado_label": "Introduce el texto cifrado (Token):",
-        "clave_input_label": "Introduce la clave secreta:",
-        "descifrar_btn": "Descifrar",
+        "cifrar_btn": "Cifrar Mensaje (Autocontenido)",
+        "cifrado_exito": (
+            "¡Texto cifrado con éxito! La clave ya va integrada en el token:"
+        ),
+        "texto_cifrado_label": (
+            "Introduce el token cifrado completo (incluye clave y datos):"
+        ),
+        "descifrar_btn": "Descifrar Token",
         "descifrar_exito": "¡Descifrado con éxito!",
         "texto_original": "Texto Original:",
         "ia_title": "Base de Descifrado Inteligente con IA (Gemini)",
@@ -161,17 +163,19 @@ TRANSLATIONS = {
         "ia_result": "¡Análisis completado por Gemini!",
         "img_title": "Cifrado de Imágenes a Nivel de Bits",
         "img_desc": (
-            "Sube una imagen, conviértela a flujo de bytes/bits y cifrala"
-            " completamente para enviarla de forma segura."
+            "Sube una imagen, conviértela a binario y empaqueta la clave de"
+            " seguridad en un único token cifrado."
         ),
         "img_cifrar_tab": "Cifrar Imagen",
         "img_descifrar_tab": "Descifrar Imagen",
         "subir_img_label": "Sube una imagen (PNG o JPG):",
-        "cifrar_img_btn": "Cifrar Imagen Completa",
-        "img_cifrada_exito": "¡Imagen cifrada en formato binario con éxito!",
-        "token_img_label": "Token de la imagen cifrada (Guárdalo o compártelo):",
-        "clave_img_label": "Clave secreta de la imagen:",
-        "token_img_input": "Introduce el token cifrado de la imagen:",
+        "cifrar_img_btn": "Cifrar Imagen (Autocontenida)",
+        "img_cifrada_exito": (
+            "¡Imagen cifrada con éxito! Este token incluye la imagen y su"
+            " clave:"
+        ),
+        "token_img_label": "Token completo de la imagen cifrada:",
+        "token_img_input": "Introduce el token completo de la imagen:",
         "descifrar_img_btn": "Descifrar y Restaurar Imagen",
         "img_original_caption": "Imagen Original",
         "img_decrypted_success": "¡Imagen descifrada y restaurada con éxito!",
@@ -246,17 +250,19 @@ TRANSLATIONS = {
         "cifrado_title": "Enkripzio eta Desenkripzio Indartsua (AES)",
         "cifrado_desc": (
             "Erabili enkripzio simetriko aurreratua (Fernet) zure mezuak"
-            " gako sekretu batekin babesteko."
+            " gakoa mezuaren barruan txertatuz babesteko."
         ),
         "cifrar_tab": "Enkripatu Mezua",
         "descifrar_tab": "Desenkripatu Mezua",
         "texto_plano_label": "Sartu enkripatu nahi duzun testua:",
-        "cifrar_btn": "Enkripatu",
-        "cifrado_exito": "Testua arrakastaz enkripatu da!",
-        "clave_usada": "🔑 **Erabilitako gako sekretua (Gorde ezazu):**",
-        "texto_cifrado_label": "Sartu testu enkripatua (Tokena):",
-        "clave_input_label": "Sartu gako sekretua:",
-        "descifrar_btn": "Desenkripatu",
+        "cifrar_btn": "Enkripatu Mezua (Autoeustsia)",
+        "cifrado_exito": (
+            "Testua arrakastaz enkripatu da! Gakoa token barruan doa:"
+        ),
+        "texto_cifrado_label": (
+            "Sartu enkripatutako token osoa (gakoa eta datuak barne):"
+        ),
+        "descifrar_btn": "Desenkripatu Tokena",
         "descifrar_exito": "Arrakastaz desenkripatua!",
         "texto_original": "Jatorrizko Testua:",
         "ia_title": "Desenkripzio Adimendunaren Basea AI-rekin (Gemini)",
@@ -270,21 +276,19 @@ TRANSLATIONS = {
         "ia_result": "Gemini-k analisia osatu du!",
         "img_title": "Irudiak Bit Mailan Enkripatzea",
         "img_desc": (
-            "Igo irudi bat, bihurtu byte/bit fluxu eta enkripatu guztiz modu"
-            " seguruan bidaltzeko."
+            "Igo irudi bat, bihurtu bit-fluxu eta paketatu segurtasun gakoa"
+            " token bakar batean."
         ),
         "img_cifrar_tab": "Enkripatu Irudia",
         "img_descifrar_tab": "Desenkripatu Irudia",
         "subir_img_label": "Igo irudi bat (PNG edo JPG):",
-        "cifrar_img_btn": "Enkripatu Irudi Osoa",
+        "cifrar_img_btn": "Enkripatu Irudia (Autoeustsia)",
         "img_cifrada_exito": (
-            "Irudia formatu bitarrean arrakastaz enkripatu da!"
+            "Irudia arrakastaz enkripatu da! Token honek irudia eta gakoa"
+            " barne hartzen ditu:"
         ),
-        "token_img_label": (
-            "Enkripatutako irudiaren tokena (Gorde edo partekatu):"
-        ),
-        "clave_img_label": "Irudiaren gako sekretua:",
-        "token_img_input": "Sartu enkripatutako irudiaren tokena:",
+        "token_img_label": "Enkripatutako irudiaren token osoa:",
+        "token_img_input": "Sartu irudiaren token osoa:",
         "descifrar_img_btn": "Desenkripatu eta Berreskuratu Irudia",
         "img_original_caption": "Jatorrizko Irudia",
         "img_decrypted_success": "Irudia arrakastaz desenkripatu eta berreskuratu da!",
@@ -381,33 +385,50 @@ menu = st.sidebar.radio(
 )
 
 # ----------------------------------------------------
-# SECCIÓN 1: CIFRADO Y DESCIFRADO POTENTE (AES)
+# SECCIÓN 1: CIFRADO Y DESCIFRADO POTENTE (CON CLAVE INTERNA)
 # ----------------------------------------------------
 if menu == t["sec1"]:
   st.header("🔒 " + t["cifrado_title"])
   st.write(t["cifrado_desc"])
-
-  if "fernet_key" not in st.session_state:
-    st.session_state.fernet_key = Fernet.generate_key()
 
   sub_tab1, sub_tab2 = st.tabs([t["cifrar_tab"], t["descifrar_tab"]])
 
   with sub_tab1:
     texto_plano = st.text_area(t["texto_plano_label"], "Mensaje secreto")
     if st.button(t["cifrar_btn"]):
-      f = Fernet(st.session_state.fernet_key)
-      token = f.encrypt(texto_plano.encode())
+      # 1. Generar una clave única para este mensaje
+      clave_dinamica = Fernet.generate_key()
+      f = Fernet(clave_dinamica)
+      # 2. Cifrar el texto
+      token_datos = f.encrypt(texto_plano.encode())
+
+      # 3. Empaquetar la clave y el token cifrado en un diccionario JSON autocontenido
+      paquete = {
+          "key": clave_dinamica.decode(),
+          "data": token_datos.decode(),
+      }
+      paquete_json = json.dumps(paquete)
+      # 4. Codificar el paquete completo en Base64 para que sea un único bloque limpio de texto
+      token_completo = base64.b64encode(paquete_json.encode()).decode()
+
       st.success(t["cifrado_exito"])
-      st.code(token.decode())
-      st.info(f"{t['clave_usada']} `{st.session_state.fernet_key.decode()}`")
+      st.code(token_completo)
 
   with sub_tab2:
-    texto_cifrado = st.text_area(t["texto_cifrado_label"])
-    clave_input = st.text_input(t["clave_input_label"], type="password")
+    token_entrada = st.text_area(t["texto_cifrado_label"])
     if st.button(t["descifrar_btn"]):
       try:
-        f = Fernet(clave_input.encode())
-        decrypted = f.decrypt(texto_cifrado.encode())
+        # 1. Decodificar desde Base64 y leer el JSON interno que trae la clave y los datos
+        json_decodificado = base64.b64decode(token_entrada.encode()).decode()
+        paquete = json.loads(json_decodificado)
+
+        clave_extraida = paquete["key"].encode()
+        datos_cifrados = paquete["data"].encode()
+
+        # 2. Descifrar utilizando la clave que venía dentro del propio mensaje
+        f = Fernet(clave_extraida)
+        decrypted = f.decrypt(datos_cifrados)
+
         st.success(t["descifrar_exito"])
         st.write(f"**{t['texto_original']}**", decrypted.decode())
       except Exception as e:
@@ -532,14 +553,11 @@ elif menu == t["sec3"]:
       st.info(t["select_contact_prompt"])
 
 # ----------------------------------------------------
-# SECCIÓN 4: CIFRADO DE IMÁGENES A NIVEL DE BITS/BYTES
+# SECCIÓN 4: CIFRADO DE IMÁGENES (CON CLAVE INTERNA)
 # ----------------------------------------------------
 elif menu == t["sec4"]:
   st.header("🖼️ " + t["img_title"])
   st.write(t["img_desc"])
-
-  if "img_fernet_key" not in st.session_state:
-    st.session_state.img_fernet_key = Fernet.generate_key()
 
   img_tab1, img_tab2 = st.tabs([t["img_cifrar_tab"], t["img_descifrar_tab"]])
 
@@ -553,23 +571,38 @@ elif menu == t["sec4"]:
 
       if st.button(t["cifrar_img_btn"]):
         img_bytes = uploaded_file.getvalue()
-        f_img = Fernet(st.session_state.img_fernet_key)
-        token_img = f_img.encrypt(img_bytes)
+        # 1. Clave única de la imagen
+        clave_img = Fernet.generate_key()
+        f_img = Fernet(clave_img)
+        token_img_bytes = f_img.encrypt(img_bytes)
+
+        # 2. Empaquetar clave y bytes cifrados juntos
+        paquete_img = {
+            "key": clave_img.decode(),
+            "data": token_img_bytes.decode(),
+        }
+        token_img_completo = base64.b64encode(
+            json.dumps(paquete_img).encode()
+        ).decode()
 
         st.success(t["img_cifrada_exito"])
-        st.text_area(t["token_img_label"], token_img.decode())
-        st.info(
-            f"{t['clave_img_label']} `{st.session_state.img_fernet_key.decode()}`"
-        )
+        st.text_area(t["token_img_label"], token_img_completo)
 
   with img_tab2:
     token_input = st.text_area(t["token_img_input"])
-    clave_img_input = st.text_input(t["clave_img_label"], type="password")
 
     if st.button(t["descifrar_img_btn"]):
       try:
-        f_img = Fernet(clave_img_input.encode())
-        decrypted_bytes = f_img.decrypt(token_input.encode())
+        # 1. Extraer clave y datos de manera automática del token completo
+        json_decodificado = base64.b64decode(token_input.encode()).decode()
+        paquete_img = json.loads(json_decodificado)
+
+        clave_extraida = paquete_img["key"].encode()
+        datos_cifrados = paquete_img["data"].encode()
+
+        # 2. Desencriptar usando la clave interna
+        f_img = Fernet(clave_extraida)
+        decrypted_bytes = f_img.decrypt(datos_cifrados)
 
         image_stream = io.BytesIO(decrypted_bytes)
         restored_image = Image.open(image_stream)
