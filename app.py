@@ -26,7 +26,7 @@ def load_users():
         return json.load(f)
       except json.JSONDecodeError:
         return {"Juan": "2325"}
-  return {"Juan": "2325"}  # Cuenta por defecto predeterminada
+  return {"Juan": "2325"}
 
 
 def save_users(users):
@@ -38,7 +38,6 @@ def load_chats():
   if os.path.exists(CHATS_FILE):
     with open(CHATS_FILE, "r", encoding="utf-8") as f:
       try:
-        # Las claves en JSON se guardan como strings, luego las convertimos a tuplas si es necesario
         data = json.load(f)
         return {eval(k): v for k, v in data.items()}
       except Exception:
@@ -48,7 +47,6 @@ def load_chats():
 
 def save_chats(chats):
   with open(CHATS_FILE, "w", encoding="utf-8") as f:
-    # Convertir tuplas de la clave a string para que JSON pueda guardarlas
     data = {str(k): v for k, v in chats.items()}
     json.dump(data, f, ensure_ascii=False, indent=4)
 
@@ -61,7 +59,6 @@ if "username" not in st.session_state:
 if "lang" not in st.session_state:
   st.session_state.lang = "Español"
 
-# Cargar usuarios y chats desde los archivos persistentes
 if "users_db" not in st.session_state:
   st.session_state.users_db = load_users()
 
@@ -93,17 +90,19 @@ TRANSLATIONS = {
         "config_success": "¡Idioma actualizado y web reiniciada con éxito!",
         "chat_title": "Mini-WhatsApp",
         "chat_desc": (
-            "Chatea con otros usuarios agregándolos por su nombre de cuenta."
+            "Chatea con otros usuarios agregándolos por su nombre de cuenta"
+            " existente."
         ),
         "add_contact_label": "Añadir contacto por nombre:",
         "add_btn": "Agregar",
-        "contact_added": "¡Contacto añadido!",
-        "contact_exists": (
-            "El contacto ya está en tu lista, es tu usuario o está vacío."
+        "contact_added": "¡Contacto añadido con éxito!",
+        "contact_not_found": (
+            "Error: El usuario no existe en la base de datos, ya está en tus"
+            " contactos o es tu propio usuario."
         ),
         "no_contacts": (
-            "No tienes contactos aún. Agrega uno a la izquierda para empezar"
-            " a chatear."
+            "No tienes contactos aún. Agrega uno existente a la izquierda para"
+            " empezar a chatear."
         ),
         "select_chat": "Selecciona chat:",
         "your_chats": "Tus Chats",
@@ -167,19 +166,19 @@ TRANSLATIONS = {
         ),
         "chat_title": "Mini-WhatsApp",
         "chat_desc": (
-            "Txateatu beste erabiltzaile batzuekin haien kontu-izenaren bidez"
-            " gehituz."
+            "Txateatu beste erabiltzaile batzuekin existitzen den kontu-izenaren"
+            " bidez gehituz."
         ),
         "add_contact_label": "Gehitu kontaktua izenez:",
         "add_btn": "Gehitu",
-        "contact_added": "Kontaktua gehituta!",
-        "contact_exists": (
-            "Kontaktua zerrendan dago jada, zure erabiltzailea da edo hutsik"
-            " dago."
+        "contact_added": "Kontaktua arrakastaz gehituta!",
+        "contact_not_found": (
+            "Errorea: Erabiltzailea ez da existitzen datu-basean, jada"
+            " kontaktuetan dago edo zure erabiltzailea da."
         ),
         "no_contacts": (
-            "Ez duzu kontakturik oraindik. Gehitu bat ezkerrean txateatzen"
-            " hasteko."
+            "Ez duzu kontakturik oraindik. Gehitu daitekeen bat ezkerrean"
+            " txateatzen hasteko."
         ),
         "select_chat": "Hautatu txata:",
         "your_chats": "Zure Txatak",
@@ -240,7 +239,6 @@ if not st.session_state.logged_in:
       submit = st.form_submit_button(t["login_btn"])
 
       if submit:
-        # Recargar usuarios por si acaso se registró alguien en otra sesión
         st.session_state.users_db = load_users()
         if (
             u_input in st.session_state.users_db
@@ -264,7 +262,7 @@ if not st.session_state.logged_in:
           st.warning("El usuario ya existe. / Erabiltzailea badago jada.")
         elif new_u and new_p:
           st.session_state.users_db[new_u] = new_p
-          save_users(st.session_state.users_db)  # Guardar en disco permanentemente
+          save_users(st.session_state.users_db)
           st.success(
               "¡Cuenta creada con éxito y guardada! / Kontua arrakastaz sortu"
               " eta gorde da!"
@@ -378,8 +376,12 @@ elif menu == t["sec3"]:
     st.subheader("Contactos")
     nuevo_contacto = st.text_input(t["add_contact_label"])
     if st.button(t["add_btn"]):
+      # Recargar usuarios para asegurar validación con cuentas actualizadas
+      st.session_state.users_db = load_users()
+
+      # Validar si el usuario existe en users.json, no está ya añadido y no es uno mismo
       if (
-          nuevo_contacto
+          nuevo_contacto in st.session_state.users_db
           and nuevo_contacto not in st.session_state.contacts
           and nuevo_contacto != st.session_state.username
       ):
@@ -387,7 +389,7 @@ elif menu == t["sec3"]:
         st.success(t["contact_added"])
         st.rerun()
       else:
-        st.warning(t["contact_exists"])
+        st.error(t["contact_not_found"])
 
     st.markdown("### " + t["your_chats"])
     if not st.session_state.contacts:
@@ -413,16 +415,18 @@ elif menu == t["sec3"]:
       with chat_container:
         for msg in st.session_state.chat_history[room_key]:
           if msg["sender"] == st.session_state.username:
+            # Letra en negro y alineado a la derecha
             st.markdown(
                 f"<div style='text-align: right; background-color:"
-                f" #DCF8C6; padding: 8px; border-radius: 10px; margin:"
-                f" 5px;'><b>Tú:</b> {msg['text']}</div>",
+                f" #DCF8C6; color: black; padding: 8px; border-radius: 10px;"
+                f" margin: 5px;'><b>Tú:</b> {msg['text']}</div>",
                 unsafe_allow_html=True,
             )
           else:
+            # Letra en negro y alineado a la izquierda
             st.markdown(
                 f"<div style='text-align: left; background-color: #E2E2E2;"
-                f" padding: 8px; border-radius: 10px; margin:"
+                f" color: black; padding: 8px; border-radius: 10px; margin:"
                 f" 5px;'><b>{msg['sender']}:</b> {msg['text']}</div>",
                 unsafe_allow_html=True,
             )
@@ -434,9 +438,7 @@ elif menu == t["sec3"]:
           st.session_state.chat_history[room_key].append(
               {"sender": st.session_state.username, "text": mensaje_texto}
           )
-          save_chats(
-              st.session_state.chat_history
-          )  # Guardar mensajes en disco permanentemente
+          save_chats(st.session_state.chat_history)
           st.rerun()
     else:
       st.info(
