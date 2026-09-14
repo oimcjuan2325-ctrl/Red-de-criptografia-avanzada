@@ -12,7 +12,7 @@ from cryptography.fernet import Fernet
 try:
   genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
   # Actualizado al modelo estándar actual compatible
-  gemini_model = genai.GenerativeModel("gemini-2.5-flash")
+  gemini_model = genai.GenerativeModel("gemini-3.6-flash")
 except Exception:
   gemini_model = None
 
