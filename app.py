@@ -194,23 +194,15 @@ TRANSLATIONS = {
             "Selecciona o agrega un contacto para ver la conversación."
         ),
         "contacts_header": "Contactos",
-        "user_exists_warn": "El usuario ya existe. / Erabiltzailea badago jada.",
-        "account_created": (
-            "¡Cuenta creada con éxito! / Kontua arrakastaz sortu da!"
-        ),
-        "fill_fields": "Rellene todos los campos. / Bete eremu guztiak.",
+        "user_exists_warn": "El usuario ya existe.",
+        "account_created": "¡Cuenta creada con éxito!",
+        "fill_fields": "Rellene todos los campos.",
         "nav_sidebar": "Navegación",
         "same_lang_info": "El idioma seleccionado es el mismo.",
         "ai_helper_prompt": (
-            "Zibersegurtasun webgune bateko '{menu}' atalean zaude. Erabiltzaileak"
-            " honako hau galdetzen du: {ai_query}. Erantzun modu erabilgarri eta"
-            " laburrean euskaraz soilik."
-            if st.session_state.lang == "Euskera"
-            else (
-                "Estás en una web de ciberseguridad en la sección '{menu}'."
-                " El usuario pregunta: {ai_query}. Responde de forma útil y"
-                " breve hablando estrictamente en ESPAÑOL."
-            )
+            "Estás en una web de ciberseguridad en la sección '{menu}'."
+            " Responde a la siguiente consulta del usuario hablando"
+            " estrictamente en ESPAÑOL: {ai_query}"
         ),
         "calc_link": "🔗 **[calculadora con IA](https://calculadora-con-ia.streamlit.app)**",
     },
@@ -315,17 +307,14 @@ TRANSLATIONS = {
             "Hautatu edo gehitu kontaktu bat elkarrizketa ikusteko."
         ),
         "contacts_header": "Kontaktuak",
-        "user_exists_warn": "Erabiltzailea badago jada. / El usuario ya existe.",
-        "account_created": (
-            "Kontua arrakastaz sortu da! / ¡Cuenta creada con éxito!"
-        ),
-        "fill_fields": "Bete eremu guztiak. / Rellene todos los campos.",
+        "user_exists_warn": "Erabiltzailea badago jada.",
+        "account_created": "Kontua arrakastaz sortu da!",
+        "fill_fields": "Bete eremu guztiak.",
         "nav_sidebar": "Nabigazioa",
         "same_lang_info": "Hautatutako hizkuntza bera da.",
         "ai_helper_prompt": (
-            "Zibersegurtasun webgune bateko '{menu}' atalean zaude. Erabiltzaileak"
-            " honako hau galdetzen du: {ai_query}. Erantzun modu erabilgarri eta"
-            " laburrean euskaraz soilik."
+            "Zibersegurtasun webgune bateko '{menu}' atalean zaude. Erantzun"
+            " erabiltzailearen honako galderari euskaraz soilik: {ai_query}"
         ),
         "calc_link": "🔗 **[kalkulagailua AI-rekin](https://calculadora-con-ia.streamlit.app)**",
     },
@@ -413,7 +402,12 @@ if menu == t["sec1"]:
   sub_tab1, sub_tab2 = st.tabs([t["cifrar_tab"], t["descifrar_tab"]])
 
   with sub_tab1:
-    texto_plano = st.text_area(t["texto_plano_label"], "Mensaje secreto")
+    texto_plano = st.text_area(
+        t["texto_plano_label"],
+        "Mezu sekretua"
+        if st.session_state.lang == "Euskera"
+        else "Mensaje secreto",
+    )
     if st.button(t["cifrar_btn"]):
       clave_dinamica = Fernet.generate_key()
       f = Fernet(clave_dinamica)
@@ -459,13 +453,16 @@ elif menu == t["sec2"]:
   if st.button(t["ia_btn"]):
     if not cifrado_usuario:
       st.warning(
-          "Por favor, introduce un texto."
-          if st.session_state.lang == "Español"
-          else "Mesedez, idatzi testu bat."
+          "Mesedez, idatzi testu bat."
+          if st.session_state.lang == "Euskera"
+          else "Por favor, introduce un texto."
       )
     elif not gemini_model:
       st.error(
-          "La API Key no está configurada en los Secrets de Streamlit Cloud."
+          "API Gakoa konfiguratu gabe dago Secret-etan."
+          if st.session_state.lang == "Euskera"
+          else "La API Key no está configurada en los Secrets de Streamlit"
+          " Cloud."
       )
     else:
       with st.spinner(t["ia_spinner"]):
@@ -536,7 +533,7 @@ elif menu == t["sec3"]:
   with col2:
     if selected_contact:
       st.subheader(
-          f"{'Chat con' if st.session_state.lang == 'Español' else 'Txata honekin'}: {selected_contact}"
+          f"{'Txata honekin' if st.session_state.lang == 'Euskera' else 'Chat con'}: {selected_contact}"
       )
       chat_container = st.container(height=350)
 
@@ -547,9 +544,9 @@ elif menu == t["sec3"]:
         st.session_state.chat_history[room_key] = [
             {
                 "sender": selected_contact,
-                "text": "¡Hola!"
-                if st.session_state.lang == "Español"
-                else "Kaixo!",
+                "text": "Kaixo!"
+                if st.session_state.lang == "Euskera"
+                else "¡Hola!",
             }
         ]
         save_chats(st.session_state.chat_history)
@@ -557,11 +554,11 @@ elif menu == t["sec3"]:
       with chat_container:
         for msg in st.session_state.chat_history[room_key]:
           sender_label = (
-              "Tú"
+              "Zu"
               if msg["sender"] == st.session_state.username
-              and st.session_state.lang == "Español"
+              and st.session_state.lang == "Euskera"
               else (
-                  "Zu"
+                  "Tú"
                   if msg["sender"] == st.session_state.username
                   else msg["sender"]
               )
@@ -654,16 +651,16 @@ elif menu == t["sec4"]:
 # ----------------------------------------------------
 elif menu == t["admin_sec"] and st.session_state.username == "Juan":
   st.header(
-      "🛡️ Panel de Administración"
-      if st.session_state.lang == "Español"
-      else "🛡️ Administrazio Panela"
+      "🛡️ Administrazio Panela"
+      if st.session_state.lang == "Euskera"
+      else "🛡️ Panel de Administración"
   )
   st.write(
-      "Control total de usuarios registrados, sesiones activas y supervisión de"
-      " chats."
-      if st.session_state.lang == "Español"
-      else "Erregistratutako erabiltzaileen, saio aktiboen eta txaten"
+      "Erregistratutako erabiltzaileen, saio aktiboen eta txaten"
       " ikuskapenaren kontrol osoa."
+      if st.session_state.lang == "Euskera"
+      else "Control total de usuarios registrados, sesiones activas y"
+      " supervisión de chats."
   )
 
   users_db = load_users()
@@ -671,67 +668,74 @@ elif menu == t["admin_sec"] and st.session_state.username == "Juan":
 
   admin_tab1, admin_tab2 = st.tabs(
       [
-          "👥 Cuentas y Conexiones"
-          if st.session_state.lang == "Español"
-          else "👥 Kontuak eta Konexioak",
-          "💬 Supervisión de Chats"
-          if st.session_state.lang == "Español"
-          else "💬 Txaten Ikuskapena",
+          "👥 Kontuak eta Konexioak"
+          if st.session_state.lang == "Euskera"
+          else "👥 Cuentas y Conexiones",
+          "💬 Txaten Ikuskapena"
+          if st.session_state.lang == "Euskera"
+          else "💬 Supervisión de Chats",
       ]
   )
 
   with admin_tab1:
     st.subheader(
-        "Cuentas Registradas y Estado Actual"
-        if st.session_state.lang == "Español"
-        else "Erregistratutako Kontuak eta Egoera"
+        "Erregistratutako Kontuak eta Egoera"
+        if st.session_state.lang == "Euskera"
+        else "Cuentas Registradas y Estado Actual"
     )
     for usr in list(users_db.keys()):
       col_u1, col_u2, col_u3 = st.columns([2, 2, 2])
       with col_u1:
         is_online = usr in st.session_state.active_sessions
-        status_txt = (
-            "🟢 Conectado"
-            if is_online
-            else ("Konektatuta" if st.session_state.lang == "Euskera" else "🔴 Desconectado")
-        )
-        if st.session_state.lang == "Euskera" and is_online:
-          status_txt = "🟢 Konektatuta"
+        if st.session_state.lang == "Euskera":
+          status_txt = "🟢 Konektatuta" if is_online else "🔴 Deskonektatuta"
+        else:
+          status_txt = "🟢 Conectado" if is_online else "🔴 Desconectado"
         st.markdown(f"**{usr}** — {status_txt}")
       with col_u2:
         st.text(f"Password: {users_db[usr]}")
       with col_u3:
         if usr != "Juan":
-          if st.button(
-              f" expulsar {usr}"
-              if st.session_state.lang == "Español"
-              else f" kanporatu {usr}",
-              key=f"exp_{usr}",
-          ):
+          btn_text = (
+              f"kanporatu {usr}"
+              if st.session_state.lang == "Euskera"
+              else f"expulsar {usr}"
+          )
+          if st.button(btn_text, key=f"exp_{usr}"):
             if usr in users_db:
               del users_db[usr]
               save_users(users_db)
             if usr in st.session_state.active_sessions:
               st.session_state.active_sessions.remove(usr)
-            st.success(f"Usuario {usr} expulsado/eliminado.")
+            success_msg = (
+                f"{usr} erabiltzailea kanporatu da."
+                if st.session_state.lang == "Euskera"
+                else f"Usuario {usr} expulsado/eliminado."
+            )
+            st.success(success_msg)
             st.rerun()
 
   with admin_tab2:
     st.subheader(
-        "Conversaciones Privadas de los Usuarios"
-        if st.session_state.lang == "Español"
-        else "Erabiltzaileen Elkarrizketa Pribatuak"
+        "Erabiltzaileen Elkarrizketa Pribatuak"
+        if st.session_state.lang == "Euskera"
+        else "Conversaciones Privadas de los Usuarios"
     )
     if not all_chats:
       st.info(
-          "No hay chats registrados aún."
-          if st.session_state.lang == "Español"
-          else "Ez dago txat erregistrorik oraindik."
+          "Ez dago txat erregistrorik oraindik."
+          if st.session_state.lang == "Euskera"
+          else "No hay chats registrados aún."
       )
     else:
       for room, msgs in all_chats.items():
         user_a, user_b = room
-        st.markdown(f"### 📁 Conversación entre: **{user_a}** y **{user_b}**")
+        room_title = (
+            f"Elkarrizketa honen artean: **{user_a}** eta **{user_b}**"
+            if st.session_state.lang == "Euskera"
+            else f"Conversación entre: **{user_a}** y **{user_b}**"
+        )
+        st.markdown(f"### 📁 {room_title}")
         for m in msgs:
           st.text(f"[{m['sender']}]: {m['text']}")
         st.markdown("---")
