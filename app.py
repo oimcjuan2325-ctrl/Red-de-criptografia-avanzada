@@ -17,6 +17,7 @@ st.set_page_config(
 # ----------------------------------------------------
 USERS_FILE = "users.json"
 CHATS_FILE = "chats.json"
+CONTACTS_FILE = "contacts.json"
 
 
 def load_users():
@@ -51,6 +52,21 @@ def save_chats(chats):
     json.dump(data, f, ensure_ascii=False, indent=4)
 
 
+def load_contacts():
+  if os.path.exists(CONTACTS_FILE):
+    with open(CONTACTS_FILE, "r", encoding="utf-8") as f:
+      try:
+        return json.load(f)
+      except json.JSONDecodeError:
+        return {}
+  return {}
+
+
+def save_contacts(contacts):
+  with open(CONTACTS_FILE, "w", encoding="utf-8") as f:
+    json.dump(contacts, f, ensure_ascii=False, indent=4)
+
+
 # Inicializar estados de sesión
 if "logged_in" not in st.session_state:
   st.session_state.logged_in = False
@@ -64,9 +80,6 @@ if "users_db" not in st.session_state:
 
 if "chat_history" not in st.session_state:
   st.session_state.chat_history = load_chats()
-
-if "contacts" not in st.session_state:
-  st.session_state.contacts = []
 
 # Textos traducidos completos (Español y Euskera)
 TRANSLATIONS = {
@@ -372,31 +385,44 @@ elif menu == t["sec3"]:
 
   col1, col2 = st.columns([1, 3])
 
+  # Cargar contactos globales desde archivo persistente
+  all_contacts_db = load_contacts()
+  user_contacts = all_contacts_db.get(st.session_state.username, [])
+
   with col1:
     st.subheader("Contactos")
     nuevo_contacto = st.text_input(t["add_contact_label"])
     if st.button(t["add_btn"]):
-      # Recargar usuarios para asegurar validación con cuentas actualizadas
       st.session_state.users_db = load_users()
 
-      # Validar si el usuario existe en users.json, no está ya añadido y no es uno mismo
+      # Validar si el usuario existe, no está ya añadido y no es uno mismo
       if (
           nuevo_contacto in st.session_state.users_db
-          and nuevo_contacto not in st.session_state.contacts
+          and nuevo_contacto not in user_contacts
           and nuevo_contacto != st.session_state.username
       ):
-        st.session_state.contacts.append(nuevo_contacto)
+        user_contacts.append(nuevo_contacto)
+        all_contacts_db[st.session_state.username] = user_contacts
+        save_contacts(all_contacts_db)
+
+        # Si agregas a la otra persona, de forma recíproca también te agregamos a ti en sus contactos
+        other_contacts = all_contacts_db.get(nuevo_contacto, [])
+        if st.session_state.username not in other_contacts:
+          other_contacts.append(st.session_state.username)
+          all_contacts_db[nuevo_contacto] = other_contacts
+          save_contacts(all_contacts_db)
+
         st.success(t["contact_added"])
         st.rerun()
       else:
         st.error(t["contact_not_found"])
 
     st.markdown("### " + t["your_chats"])
-    if not st.session_state.contacts:
+    if not user_contacts:
       st.info(t["no_contacts"])
       selected_contact = None
     else:
-      selected_contact = st.radio(t["select_chat"], st.session_state.contacts)
+      selected_contact = st.radio(t["select_chat"], user_contacts)
 
   with col2:
     if selected_contact:
@@ -415,7 +441,6 @@ elif menu == t["sec3"]:
       with chat_container:
         for msg in st.session_state.chat_history[room_key]:
           if msg["sender"] == st.session_state.username:
-            # Letra en negro y alineado a la derecha
             st.markdown(
                 f"<div style='text-align: right; background-color:"
                 f" #DCF8C6; color: black; padding: 8px; border-radius: 10px;"
@@ -423,7 +448,6 @@ elif menu == t["sec3"]:
                 unsafe_allow_html=True,
             )
           else:
-            # Letra en negro y alineado a la izquierda
             st.markdown(
                 f"<div style='text-align: left; background-color: #E2E2E2;"
                 f" color: black; padding: 8px; border-radius: 10px; margin:"
@@ -491,3 +515,11 @@ if st.sidebar.button(t["ai_query_btn"]):
       )
   else:
     st.sidebar.warning("Escribe una consulta.")
+
+# ----------------------------------------------------
+# ENLACE CALCULADORA CON IA (PIE DE BARRA LATERAL)
+# ----------------------------------------------------
+st.sidebar.markdown("---")
+st.sidebar.markdown(
+    "🔗 **[calculadora con IA](https://calculadora-con-ia.streamlit.app)**"
+)
