@@ -109,6 +109,7 @@ TRANSLATIONS = {
         "sec2": "2. Base de Descifrado Inteligente (IA)",
         "sec3": "3. Mini-WhatsApp (Chat)",
         "sec4": "4. Cifrado de Imágenes (Bits)",
+        "admin_sec": "5. Panel de Administración (Juan)",
         "config": "Configuración",
         "ai_helper": "Asistente IA",
         "lang_label": "Idioma / Hizkuntza",
@@ -201,9 +202,15 @@ TRANSLATIONS = {
         "nav_sidebar": "Navegación",
         "same_lang_info": "El idioma seleccionado es el mismo.",
         "ai_helper_prompt": (
-            "Estás en una web de ciberseguridad en la sección '{menu}'. El"
-            " usuario pregunta: {ai_query}. Responde de forma útil y breve"
-            " hablando estrictamente en ESPAÑOL."
+            "Zibersegurtasun webgune bateko '{menu}' atalean zaude. Erabiltzaileak"
+            " honako hau galdetzen du: {ai_query}. Erantzun modu erabilgarri eta"
+            " laburrean euskaraz soilik."
+            if st.session_state.lang == "Euskera"
+            else (
+                "Estás en una web de ciberseguridad en la sección '{menu}'."
+                " El usuario pregunta: {ai_query}. Responde de forma útil y"
+                " breve hablando estrictamente en ESPAÑOL."
+            )
         ),
         "calc_link": "🔗 **[calculadora con IA](https://calculadora-con-ia.streamlit.app)**",
     },
@@ -221,6 +228,7 @@ TRANSLATIONS = {
         "sec2": "2. Desenkripzio Adimendunaren Basea (AI)",
         "sec3": "3. Mini-WhatsApp (Txata)",
         "sec4": "4. Irudiak Enkripatzea (Bitak)",
+        "admin_sec": "5. Administrazio Panela (Juan)",
         "config": "Konfigurazioa",
         "ai_helper": "AI Laguntzailea",
         "lang_label": "Hizkuntza / Idioma",
@@ -326,6 +334,12 @@ TRANSLATIONS = {
 t = TRANSLATIONS[st.session_state.lang]
 
 # ----------------------------------------------------
+# REGISTRO GLOBAL DE USUARIOS CONECTADOS
+# ----------------------------------------------------
+if "active_sessions" not in st.session_state:
+  st.session_state.active_sessions = set()
+
+# ----------------------------------------------------
 # PANTALLA DE INICIO DE SESIÓN
 # ----------------------------------------------------
 if not st.session_state.logged_in:
@@ -340,13 +354,11 @@ if not st.session_state.logged_in:
       submit = st.form_submit_button(t["login_btn"])
 
       if submit:
-        st.session_state.users_db = load_users()
-        if (
-            u_input in st.session_state.users_db
-            and st.session_state.users_db[u_input] == p_input
-        ):
+        users_db = load_users()
+        if u_input in users_db and users_db[u_input] == p_input:
           st.session_state.logged_in = True
           st.session_state.username = u_input
+          st.session_state.active_sessions.add(u_input)
           st.rerun()
         else:
           st.error(t["login_error"])
@@ -358,12 +370,12 @@ if not st.session_state.logged_in:
       reg_submit = st.form_submit_button(t["register_btn"])
 
       if reg_submit:
-        st.session_state.users_db = load_users()
-        if new_u in st.session_state.users_db:
+        users_db = load_users()
+        if new_u in users_db:
           st.warning(t["user_exists_warn"])
         elif new_u and new_p:
-          st.session_state.users_db[new_u] = new_p
-          save_users(st.session_state.users_db)
+          users_db[new_u] = new_p
+          save_users(users_db)
           st.success(t["account_created"])
         else:
           st.error(t["fill_fields"])
@@ -375,15 +387,21 @@ if not st.session_state.logged_in:
 # ----------------------------------------------------
 st.sidebar.title(f"👤 {st.session_state.username}")
 if st.sidebar.button(t["logout"]):
+  if st.session_state.username in st.session_state.active_sessions:
+    st.session_state.active_sessions.remove(st.session_state.username)
   st.session_state.logged_in = False
   st.session_state.username = ""
   st.rerun()
 
 st.sidebar.markdown("---")
 st.sidebar.subheader(t["nav_title"])
-menu = st.sidebar.radio(
-    t["nav_sidebar"], [t["sec1"], t["sec2"], t["sec3"], t["sec4"], t["config"]]
-)
+
+nav_options = [t["sec1"], t["sec2"], t["sec3"], t["sec4"]]
+if st.session_state.username == "Juan":
+  nav_options.append(t["admin_sec"])
+nav_options.append(t["config"])
+
+menu = st.sidebar.radio(t["nav_sidebar"], nav_options)
 
 # ----------------------------------------------------
 # SECCIÓN 1: CIFRADO Y DESCIFRADO POTENTE (CON CLAVE INTERNA)
@@ -440,7 +458,11 @@ elif menu == t["sec2"]:
 
   if st.button(t["ia_btn"]):
     if not cifrado_usuario:
-      st.warning("Por favor, introduce un texto." if st.session_state.lang == "Español" else "Mesedez, idatzi testu bat.")
+      st.warning(
+          "Por favor, introduce un texto."
+          if st.session_state.lang == "Español"
+          else "Mesedez, idatzi testu bat."
+      )
     elif not gemini_model:
       st.error(
           "La API Key no está configurada en los Secrets de Streamlit Cloud."
@@ -482,10 +504,10 @@ elif menu == t["sec3"]:
     st.subheader(t["contacts_header"])
     nuevo_contacto = st.text_input(t["add_contact_label"])
     if st.button(t["add_btn"]):
-      st.session_state.users_db = load_users()
+      users_db = load_users()
 
       if (
-          nuevo_contacto in st.session_state.users_db
+          nuevo_contacto in users_db
           and nuevo_contacto not in user_contacts
           and nuevo_contacto != st.session_state.username
       ):
@@ -513,7 +535,9 @@ elif menu == t["sec3"]:
 
   with col2:
     if selected_contact:
-      st.subheader(f"{'Chat con' if st.session_state.lang == 'Español' else 'Txata honekin'}: {selected_contact}")
+      st.subheader(
+          f"{'Chat con' if st.session_state.lang == 'Español' else 'Txata honekin'}: {selected_contact}"
+      )
       chat_container = st.container(height=350)
 
       st.session_state.chat_history = load_chats()
@@ -521,13 +545,27 @@ elif menu == t["sec3"]:
 
       if room_key not in st.session_state.chat_history:
         st.session_state.chat_history[room_key] = [
-            {"sender": selected_contact, "text": "¡Hola!" if st.session_state.lang == 'Español' else "Kaixo!"}
+            {
+                "sender": selected_contact,
+                "text": "¡Hola!"
+                if st.session_state.lang == "Español"
+                else "Kaixo!",
+            }
         ]
         save_chats(st.session_state.chat_history)
 
       with chat_container:
         for msg in st.session_state.chat_history[room_key]:
-          sender_label = "Tú" if msg['sender'] == st.session_state.username and st.session_state.lang == 'Español' else ("Zu" if msg['sender'] == st.session_state.username else msg['sender'])
+          sender_label = (
+              "Tú"
+              if msg["sender"] == st.session_state.username
+              and st.session_state.lang == "Español"
+              else (
+                  "Zu"
+                  if msg["sender"] == st.session_state.username
+                  else msg["sender"]
+              )
+          )
           if msg["sender"] == st.session_state.username:
             st.markdown(
                 f"<div style='text-align: right; background-color:"
@@ -610,6 +648,93 @@ elif menu == t["sec4"]:
         st.image(restored_image, caption=t["img_decrypted_caption"], width=300)
       except Exception as e:
         st.error(f"{t['img_error']}{e}")
+
+# ----------------------------------------------------
+# SECCIÓN 5: PANEL DE ADMINISTRACIÓN (EXCLUSIVO PARA JUAN)
+# ----------------------------------------------------
+elif menu == t["admin_sec"] and st.session_state.username == "Juan":
+  st.header(
+      "🛡️ Panel de Administración"
+      if st.session_state.lang == "Español"
+      else "🛡️ Administrazio Panela"
+  )
+  st.write(
+      "Control total de usuarios registrados, sesiones activas y supervisión de"
+      " chats."
+      if st.session_state.lang == "Español"
+      else "Erregistratutako erabiltzaileen, saio aktiboen eta txaten"
+      " ikuskapenaren kontrol osoa."
+  )
+
+  users_db = load_users()
+  all_chats = load_chats()
+
+  admin_tab1, admin_tab2 = st.tabs(
+      [
+          "👥 Cuentas y Conexiones"
+          if st.session_state.lang == "Español"
+          else "👥 Kontuak eta Konexioak",
+          "💬 Supervisión de Chats"
+          if st.session_state.lang == "Español"
+          else "💬 Txaten Ikuskapena",
+      ]
+  )
+
+  with admin_tab1:
+    st.subheader(
+        "Cuentas Registradas y Estado Actual"
+        if st.session_state.lang == "Español"
+        else "Erregistratutako Kontuak eta Egoera"
+    )
+    for usr in list(users_db.keys()):
+      col_u1, col_u2, col_u3 = st.columns([2, 2, 2])
+      with col_u1:
+        is_online = usr in st.session_state.active_sessions
+        status_txt = (
+            "🟢 Conectado"
+            if is_online
+            else ("Konektatuta" if st.session_state.lang == "Euskera" else "🔴 Desconectado")
+        )
+        if st.session_state.lang == "Euskera" and is_online:
+          status_txt = "🟢 Konektatuta"
+        st.markdown(f"**{usr}** — {status_txt}")
+      with col_u2:
+        st.text(f"Password: {users_db[usr]}")
+      with col_u3:
+        if usr != "Juan":
+          if st.button(
+              f" expulsar {usr}"
+              if st.session_state.lang == "Español"
+              else f" kanporatu {usr}",
+              key=f"exp_{usr}",
+          ):
+            if usr in users_db:
+              del users_db[usr]
+              save_users(users_db)
+            if usr in st.session_state.active_sessions:
+              st.session_state.active_sessions.remove(usr)
+            st.success(f"Usuario {usr} expulsado/eliminado.")
+            st.rerun()
+
+  with admin_tab2:
+    st.subheader(
+        "Conversaciones Privadas de los Usuarios"
+        if st.session_state.lang == "Español"
+        else "Erabiltzaileen Elkarrizketa Pribatuak"
+    )
+    if not all_chats:
+      st.info(
+          "No hay chats registrados aún."
+          if st.session_state.lang == "Español"
+          else "Ez dago txat erregistrorik oraindik."
+      )
+    else:
+      for room, msgs in all_chats.items():
+        user_a, user_b = room
+        st.markdown(f"### 📁 Conversación entre: **{user_a}** y **{user_b}**")
+        for m in msgs:
+          st.text(f"[{m['sender']}]: {m['text']}")
+        st.markdown("---")
 
 # ----------------------------------------------------
 # CONFIGURACIÓN
