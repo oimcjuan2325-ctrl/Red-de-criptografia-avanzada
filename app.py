@@ -14,7 +14,6 @@ from PIL import Image, UnidentifiedImageError
 # ====================================================
 try:
   genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-  # Actualizado al nuevo modelo estable de Google (gemini-3.6-flash)
   gemini_model = genai.GenerativeModel("gemini-3.6-flash")
 except Exception:
   gemini_model = None
@@ -159,7 +158,8 @@ TRANSLATIONS = {
         "sec3": "3. Mini-WhatsApp (Chat)",
         "sec4": "4. Cifrado de Imágenes (Bits)",
         "sec5": "5. Papelera de Reciclaje",
-        "admin_sec": "6. Panel de Administración (Juan)",
+        "sec6": "6. Descifrado Inteligente con IA",
+        "admin_sec": "7. Panel de Administración (Juan)",
         "config": "Configuración",
         "ai_helper": "Asistente IA Rápido",
         "lang_label": "Idioma / Hizkuntza / Language / Langue",
@@ -235,6 +235,15 @@ TRANSLATIONS = {
         "invalid_image_err": (
             "El archivo subido no es una imagen válida o está dañado."
         ),
+        "ai_dec_title": "Descifrado Inteligente de Textos con IA",
+        "ai_dec_desc": (
+            "Introduce cualquier texto cifrado (Cesar, Base64, binario, hash"
+            " o cifrado desconocido) y la IA lo analizará para"
+            " descifrarlo."
+        ),
+        "ai_dec_label": "Introduce el texto cifrado o código sospechoso:",
+        "ai_dec_btn": "Analizar y Descifrar con IA",
+        "ai_dec_spinner": "Analizando algoritmo y descifrando...",
         "ai_helper_desc": (
             "Gemini está conectado para ayudarte en esta sección."
         ),
@@ -318,7 +327,8 @@ TRANSLATIONS = {
         "sec3": "3. Mini-WhatsApp (Txata)",
         "sec4": "4. Irudiak Enkripatzea (Bitak)",
         "sec5": "5. Zakarrontzia",
-        "admin_sec": "6. Administrazio Panela (Juan)",
+        "sec6": "6. AI Bidezko Desenkripzio Adimenduna",
+        "admin_sec": "7. Administrazio Panela (Juan)",
         "config": "Konfigurazioa",
         "ai_helper": "AI Laguntzaile Azkarra",
         "lang_label": "Hizkuntza / Idioma / Language / Langue",
@@ -396,6 +406,14 @@ TRANSLATIONS = {
         "invalid_image_err": (
             "Igotako fitxategia ez da baliozko irudia edo hondatuta dago."
         ),
+        "ai_dec_title": "Testuen Desenkripzio Adimenduna IA bidez",
+        "ai_dec_desc": (
+            "Sartu edozein testu enkripatu (Zesar, Base64, bitarra, hash"
+            " edo enkripzio ezezaguna) eta AIak aztertuko du desenkriptatzeko."
+        ),
+        "ai_dec_label": "Sartu testu enkripatua edo kode susmagarria:",
+        "ai_dec_btn": "Aztertu eta Desenkripatu IA bidez",
+        "ai_dec_spinner": "Algoritmoa aztertzen eta desenkripatzen...",
         "ai_helper_desc": (
             "Gemini konektatuta dago atal honetan laguntzeko."
         ),
@@ -476,7 +494,8 @@ TRANSLATIONS = {
         "sec3": "3. Mini-WhatsApp (Chat)",
         "sec4": "4. Image Encryption (Bits)",
         "sec5": "5. Recycle Bin",
-        "admin_sec": "6. Admin Panel (Juan)",
+        "sec6": "6. Intelligent AI Decryption",
+        "admin_sec": "7. Admin Panel (Juan)",
         "config": "Settings",
         "ai_helper": "Quick AI Assistant",
         "lang_label": "Language / Hizkuntza / Idioma / Langue",
@@ -553,6 +572,14 @@ TRANSLATIONS = {
         "invalid_image_err": (
             "The uploaded file is not a valid image or is corrupted."
         ),
+        "ai_dec_title": "Intelligent Text Decryption with AI",
+        "ai_dec_desc": (
+            "Enter any encrypted text (Caesar, Base64, binary, hash, or"
+            " unknown cipher) and AI will analyze and decrypt it."
+        ),
+        "ai_dec_label": "Enter the encrypted text or suspicious code:",
+        "ai_dec_btn": "Analyze and Decrypt with AI",
+        "ai_dec_spinner": "Analyzing algorithm and decrypting...",
         "ai_helper_desc": "Gemini is connected to help you in this section.",
         "ai_query_label": "How can I help you?",
         "ai_query_btn": "Ask Gemini",
@@ -630,7 +657,8 @@ TRANSLATIONS = {
         "sec3": "3. Mini-WhatsApp (Chat)",
         "sec4": "4. Chiffrement d'Images (Bits)",
         "sec5": "5. Corbeille",
-        "admin_sec": "6. Panneau d'Administration (Juan)",
+        "sec6": "6. Déchiffrement Intelligent par IA",
+        "admin_sec": "7. Panneau d'Administration (Juan)",
         "config": "Paramètres",
         "ai_helper": "Assistant IA Rapide",
         "lang_label": "Langue / Hizkuntza / Idioma / Language",
@@ -711,6 +739,14 @@ TRANSLATIONS = {
         "invalid_image_err": (
             "Le fichier téléchargé n'est pas une image valide ou est endommagé."
         ),
+        "ai_dec_title": "Déchiffrer Intelligent de Textes par IA",
+        "ai_dec_desc": (
+            "Entrez n'importe quel texte chiffré (Cesar, Base64, binaire,"
+            " hachage ou inconnu) et l'IA l'analysera pour le déchiffrer."
+        ),
+        "ai_dec_label": "Entrez le texte chiffré ou le code suspect :",
+        "ai_dec_btn": "Analyser et Déchiffrer avec l'IA",
+        "ai_dec_spinner": "Analyse de l'algorithme et déchiffrement...",
         "ai_helper_desc": "Gemini est connecté pour vous aider dans cette section.",
         "ai_query_label": "Comment puis-je vous aider ?",
         "ai_query_btn": "Demander à Gemini",
@@ -851,7 +887,14 @@ if st.sidebar.button(t["logout"]):
 st.sidebar.markdown("---")
 st.sidebar.subheader(t["nav_title"])
 
-nav_options = [t["sec1"], t["sec2"], t["sec3"], t["sec4"], t["sec5"]]
+nav_options = [
+    t["sec1"],
+    t["sec2"],
+    t["sec3"],
+    t["sec4"],
+    t["sec5"],
+    t["sec6"],
+]
 if st.session_state.username == "Juan":
   nav_options.append(t["admin_sec"])
 nav_options.append(t["config"])
@@ -1113,7 +1156,7 @@ elif menu == t["sec3"]:
       st.info(t["select_contact_prompt"])
 
 # ----------------------------------------------------
-# SECCIÓN 4: CIFRADO DE IMÁGENES (CON CONTROL DE EXCEPCIÓN PIL)
+# SECCIÓN 4: CIFRADO DE IMÁGENES
 # ----------------------------------------------------
 elif menu == t["sec4"]:
   st.header("🖼️ " + t["img_title"])
@@ -1234,7 +1277,42 @@ elif menu == t["sec5"]:
           st.rerun()
 
 # ----------------------------------------------------
-# SECCIÓN 6: PANEL DE ADMINISTRACIÓN (EXCLUSIVO PARA JUAN)
+# SECCIÓN 6: DESCIFRADO INTELIGENTE CON IA
+# ----------------------------------------------------
+elif menu == t["sec6"]:
+  st.header("🧠 " + t["ai_dec_title"])
+  st.write(t["ai_dec_desc"])
+
+  texto_cifrado_ia = st.text_area(t["ai_dec_label"])
+  if st.button(t["ai_dec_btn"]):
+    if not texto_cifrado_ia:
+      st.warning(t["write_query"])
+    elif not gemini_model:
+      st.error(t["ai_missing_key"])
+    else:
+      with st.spinner(t["ai_dec_spinner"]):
+        try:
+          prompt_analisis = (
+              f"Actúa como un perito experto en criptografía y análisis forense"
+              f" de datos. Analiza el siguiente texto cifrado o código"
+              f" sospechoso, identifica de qué tipo de cifrado o codificación"
+              f" se trata (por ejemplo: Cesar, Base64, binario, hexadecimal,"
+              f" hash, etc.), explícalo brevemente y proporciona el texto"
+              f" descifrado en claro. Responde estrictamente en"
+              f" {st.session_state.lang}.\n\nTexto a analizar:\n"
+              f" {texto_cifrado_ia}"
+          )
+          response = gemini_model.generate_content(prompt_analisis)
+          log_audit_event(
+              st.session_state.username, "Descifrado inteligente con IA"
+          )
+          st.success(t["descifrar_exito"])
+          st.markdown(response.text)
+        except Exception as e:
+          st.error(f"Error: {e}")
+
+# ----------------------------------------------------
+# SECCIÓN 7: PANEL DE ADMINISTRACIÓN (EXCLUSIVO PARA JUAN)
 # ----------------------------------------------------
 elif menu == t["admin_sec"] and st.session_state.username == "Juan":
   st.header("🛡️ " + t["admin_title"])
