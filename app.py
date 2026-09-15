@@ -14,8 +14,8 @@ from PIL import Image, UnidentifiedImageError
 # ====================================================
 try:
   genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-  # Actualizado al modelo moderno para evitar errores 404
-  gemini_model = genai.GenerativeModel("gemini-2.5-flash")
+  # Actualizado al nuevo modelo estable de Google (gemini-3.6-flash)
+  gemini_model = genai.GenerativeModel("gemini-3.6-flash")
 except Exception:
   gemini_model = None
 
